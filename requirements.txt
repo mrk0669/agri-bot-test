@@ -1,0 +1,5 @@
+# Core runtime - required on both dev laptop and Jetson
+numpy>=1.21
+opencv-python>=4.5
+PyYAML>=5.4
+pyserial>=3.5

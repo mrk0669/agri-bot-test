@@ -1,0 +1,407 @@
+{
+  "tier1": {
+    "ms": 46.11,
+    "detections": [
+      {
+        "cls": "weed",
+        "bbox": [
+          199.0,
+          785.0,
+          362.0,
+          947.0
+        ],
+        "confidence": 0.98,
+        "source": "color",
+        "area_px": 24600.0,
+        "meta": {
+          "extent": 0.932,
+          "aspect": 1.006,
+          "solidity": 0.989
+        }
+      },
+      {
+        "cls": "weed",
+        "bbox": [
+          1067.0,
+          693.0,
+          1174.0,
+          798.0
+        ],
+        "confidence": 0.9732,
+        "source": "color",
+        "area_px": 10157.5,
+        "meta": {
+          "extent": 0.904,
+          "aspect": 1.019,
+          "solidity": 0.989
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          811.0,
+          265.0,
+          952.0,
+          408.0
+        ],
+        "confidence": 0.9834,
+        "source": "color",
+        "area_px": 19042.5,
+        "meta": {
+          "extent": 0.944,
+          "aspect": 0.986,
+          "solidity": 0.989
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          454.0,
+          130.0,
+          555.0,
+          230.0
+        ],
+        "confidence": 0.9806,
+        "source": "color",
+        "area_px": 9451.0,
+        "meta": {
+          "extent": 0.936,
+          "aspect": 1.01,
+          "solidity": 0.987
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          326.0,
+          725.0,
+          468.0,
+          797.0
+        ],
+        "confidence": 0.8001,
+        "source": "color",
+        "area_px": 4500.0,
+        "meta": {
+          "extent": 0.44,
+          "aspect": 1.972,
+          "solidity": 0.76
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          1063.0,
+          206.0,
+          1143.0,
+          310.0
+        ],
+        "confidence": 0.8458,
+        "source": "color",
+        "area_px": 4375.5,
+        "meta": {
+          "extent": 0.526,
+          "aspect": 0.769,
+          "solidity": 0.857
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          1035.0,
+          303.0,
+          1147.0,
+          405.0
+        ],
+        "confidence": 0.7843,
+        "source": "color",
+        "area_px": 4230.0,
+        "meta": {
+          "extent": 0.37,
+          "aspect": 1.098,
+          "solidity": 0.767
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          780.0,
+          996.0,
+          867.0,
+          1066.0
+        ],
+        "confidence": 0.8473,
+        "source": "color",
+        "area_px": 3229.5,
+        "meta": {
+          "extent": 0.53,
+          "aspect": 1.243,
+          "solidity": 0.859
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          47.0,
+          1011.0,
+          154.0,
+          1052.0
+        ],
+        "confidence": 0.8332,
+        "source": "color",
+        "area_px": 2304.0,
+        "meta": {
+          "extent": 0.525,
+          "aspect": 2.61,
+          "solidity": 0.808
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          132.0,
+          1099.0,
+          188.0,
+          1165.0
+        ],
+        "confidence": 0.8524,
+        "source": "color",
+        "area_px": 2022.5,
+        "meta": {
+          "extent": 0.547,
+          "aspect": 0.848,
+          "solidity": 0.862
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          531.0,
+          466.0,
+          593.0,
+          511.0
+        ],
+        "confidence": 0.8447,
+        "source": "color",
+        "area_px": 1529.5,
+        "meta": {
+          "extent": 0.548,
+          "aspect": 1.378,
+          "solidity": 0.831
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          686.0,
+          411.0,
+          724.0,
+          470.0
+        ],
+        "confidence": 0.8447,
+        "source": "color",
+        "area_px": 1241.5,
+        "meta": {
+          "extent": 0.554,
+          "aspect": 0.644,
+          "solidity": 0.825
+        }
+      },
+      {
+        "cls": "weed",
+        "bbox": [
+          466.0,
+          1004.0,
+          779.0,
+          1100.0
+        ],
+        "reason": "aspect 3.26 outside [0.35, 3.00]",
+        "area_px": 14079.0,
+        "extent": 0.469,
+        "aspect": 3.26,
+        "solidity": 0.714
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          852.0,
+          667.0,
+          1288.0,
+          1001.0
+        ],
+        "reason": "solidity 0.55 < 0.70",
+        "area_px": 53270.0,
+        "extent": 0.366,
+        "aspect": 1.305,
+        "solidity": 0.549
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          90.0,
+          535.0,
+          407.0,
+          741.0
+        ],
+        "reason": "solidity 0.61 < 0.70",
+        "area_px": 23134.5,
+        "extent": 0.354,
+        "aspect": 1.539,
+        "solidity": 0.609
+      }
+    ]
+  },
+  "tier2": {
+    "ms": 38.85,
+    "detections": [
+      {
+        "cls": "weed",
+        "bbox": [
+          681.4920654296875,
+          785.5140380859375,
+          868.2611083984375,
+          1033.895751953125
+        ],
+        "confidence": 0.8731,
+        "source": "yolo",
+        "area_px": 46390.0,
+        "meta": {
+          "label": "weed",
+          "cls_idx": 1
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          1104.6077880859375,
+          435.36492919921875,
+          1362.6474609375,
+          766.9600830078125
+        ],
+        "confidence": 0.8398,
+        "source": "yolo",
+        "area_px": 85564.7,
+        "meta": {
+          "label": "crop",
+          "cls_idx": 0
+        }
+      },
+      {
+        "cls": "weed",
+        "bbox": [
+          461.3303527832031,
+          818.8604125976562,
+          595.960693359375,
+          962.0698852539062
+        ],
+        "confidence": 0.7618,
+        "source": "yolo",
+        "area_px": 19280.3,
+        "meta": {
+          "label": "weed",
+          "cls_idx": 1
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          130.85621643066406,
+          494.5622863769531,
+          324.30615234375,
+          755.2223510742188
+        ],
+        "confidence": 0.6092,
+        "source": "yolo",
+        "area_px": 50424.7,
+        "meta": {
+          "label": "crop",
+          "cls_idx": 0
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          942.0384521484375,
+          1144.2774658203125,
+          1251.362548828125,
+          1327.0
+        ],
+        "confidence": 0.5762,
+        "source": "yolo",
+        "area_px": 56520.5,
+        "meta": {
+          "label": "crop",
+          "cls_idx": 0
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          951.2800903320312,
+          907.1166381835938,
+          1395.7430419921875,
+          1174.681396484375
+        ],
+        "confidence": 0.4425,
+        "source": "yolo",
+        "area_px": 118922.6,
+        "meta": {
+          "label": "crop",
+          "cls_idx": 0
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          965.3341674804688,
+          724.8695678710938,
+          1417.115966796875,
+          946.9970703125
+        ],
+        "confidence": 0.3636,
+        "source": "yolo",
+        "area_px": 100353.2,
+        "meta": {
+          "label": "crop",
+          "cls_idx": 0
+        }
+      }
+    ]
+  },
+  "tier3": {
+    "ms": 67.03,
+    "detections": [
+      {
+        "cls": "crop",
+        "bbox": [
+          936.2757568359375,
+          446.5701904296875,
+          1426.4854736328125,
+          1323.797119140625
+        ],
+        "confidence": 0.417,
+        "source": "zeroshot",
+        "area_px": 430025.2,
+        "meta": {
+          "label": "leafy green plant",
+          "cls_idx": 1
+        }
+      },
+      {
+        "cls": "crop",
+        "bbox": [
+          672.05224609375,
+          777.65576171875,
+          860.7039184570312,
+          1036.47314453125
+        ],
+        "confidence": 0.2274,
+        "source": "zeroshot",
+        "area_px": 48826.3,
+        "meta": {
+          "label": "leafy green plant",
+          "cls_idx": 1
+        }
+      }
+    ]
+  }
+}

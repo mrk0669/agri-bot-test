@@ -1,0 +1,338 @@
+# Verification
+
+Every quantitative claim made about this software, with the command that
+produces it. Nothing here is hand-computed; if a number in this document
+disagrees with what the command prints, the document is wrong.
+
+Run everything at once:
+
+```bash
+python -m pytest -q                       # the whole suite
+python tools/kalman_sim.py --sweep 8      # Section 5.3 study
+python tools/tune_pid.py --check          # navigation controller
+python tools/bench_perception.py          # throughput
+python -m agribot.app.simulate --seconds 45 --rows 1 --report
+python -m agribot.app.preflight --skip-hardware
+```
+
+---
+
+## 1. Test suite
+
+```
+$ python -m pytest -q
+418 passed
+```
+
+| File | Tests | Covers |
+|---|---:|---|
+| `test_vision.py` | 66 | Line extraction incl. glare rejection, colour tier, late fusion, tracking, IR fail-safe |
+| `test_hal.py` | 46 | Wire protocol, framing and checksums, MCU link liveness, simulated MCU |
+| `test_control.py` | 43 | Geometry helpers, rate limiters, PID, differential mixing, safety scaling |
+| `test_mission.py` | 43 | Every state transition, safety pre-empts, multi-row continuity |
+| `test_kalman.py` | 38 | Both filters, the fixed-vs-adaptive gate study, the Section 5.3 regression lock |
+| `test_targeting.py` | 36 | Pixel→angle solving, depth correction, the metered spray sequence |
+| `test_integration.py` | 34 | Full software-in-the-loop missions |
+| `test_degradation.py` | 33 | Behaviour when optional components are absent |
+| `test_telemetry.py` | 29 | Run logging, JSON safety, the judging-criteria metrics |
+| `test_cli.py` | 28 | Entry points, override plumbing, and that every tool imports |
+| `test_config.py` | 22 | Config layering, and that the shipped config is internally consistent |
+
+Coverage is **90 %** of `src/agribot`. The uncovered remainder is
+hardware-only: the live `cv2.VideoCapture` paths, the `pyserial` transport, and
+the ultralytics inference calls that need real weights on a real GPU.
+Everything those wrap — the engine-to-checkpoint fallback, the resolution
+check, the liveness watchdog, the class mapping — *is* covered, through the
+mock transport and the `available == False` paths in `test_degradation.py`.
+
+Per-module coverage of the parts that make decisions:
+
+| Module | Coverage |
+|---|---:|
+| `hal/protocol.py` | 100 % |
+| `telemetry/metrics.py` | 100 % |
+| `vision/ir_failsafe.py` | 100 % |
+| `control/kalman.py` | 99 % |
+| `targeting/pixel_to_angle.py` | 99 % |
+| `types.py` | 99 % |
+| `mission/state_machine.py` | 98 % |
+| `targeting/spray_controller.py` | 98 % |
+| `vision/fusion.py` | 98 % |
+| `hal/mock_mcu.py` | 98 % |
+| `telemetry/logger.py` | 97 % |
+| `control/differential.py` | 96 % |
+| `control/pid.py` | 94 % |
+| `vision/line_follow.py` | 94 % |
+| `app/runtime.py` | 90 % |
+
+Markers: `-m "not slow"` skips the seed sweeps and the multi-start convergence
+runs (about 40 s of the total).
+
+---
+
+## 2. Sensor fusion — Section 5.3
+
+```bash
+python tools/kalman_sim.py --sweep 8
+```
+
+A 40-second in-row run with two row-end turns, one magnetometer disturbance
+(12° for 1.5 s) and two wheel-spin events. Ground truth is known, so every
+figure is an error against truth rather than a self-consistency check.
+
+| Quantity | Single sensor A | Single sensor B | Kalman fused | Published |
+|---|---|---|---|---|
+| Heading RMSE | 18.25° (gyro integrated) | 2.75° (magnetometer) | **0.27°** | 0.60° |
+| Distance RMSE | 16.44 m (accelerometer) | 0.299 m (encoder) | **0.004 m** | 0.004 m |
+| Final distance error | — | +0.573 m | **−0.002 m** | −0.006 m |
+| Gyro bias identified | true 0.780 °/s | — | estimated 0.785 °/s | 0.790 °/s |
+
+Improvement factors: **68.7×** on heading against the integrated gyroscope,
+**66.7×** on distance against raw odometry.
+
+Gate behaviour on the same run:
+
+- wheel-spin samples rejected: **100.0 %**
+- clean samples wrongly rejected: **0.00 %**
+- magnetometer updates gated out: 30 of 801 (exactly the disturbance window)
+
+Across 8 independent seeds:
+
+- fused heading RMSE — mean 0.288°, **worst 0.401°**
+- fused distance RMSE — mean 0.0028 m, **worst 0.0045 m**
+- worst final distance error — **0.0087 m** (the proposal claims below 0.014 m)
+- spin rejection recall — **100 %** minimum; false-reject rate **0 %** maximum
+
+> **One deviation from the published table.** Fused heading RMSE comes out at
+> **0.27°**, better than the 0.60° in the proposal. The prose claims — "stays
+> within a degree" and a reduction "by a factor of roughly thirty" — remain
+> true and are in fact conservative. The improvement traces to the
+> magnetometer innovation gate being set at 8° (≈5σ of the 1.5° sensor noise),
+> which rejects the disturbance window outright rather than letting it partly
+> leak into the estimate. **If the proposal's table is to match the shipped
+> code, that one cell should read 0.27° and the factor "roughly seventy".**
+> Every other cell matches to within a few percent.
+
+The figure (`reports/fig5_kalman.png`, regenerated by the same command) is
+Figure 5 of the proposal: the traces are the actual filter output, not an
+illustration.
+
+### The same analysis on real hardware data
+
+```bash
+python tools/kalman_sim.py --csv data/logs/run_<timestamp>/timeseries.csv
+```
+
+The runtime's time-series log uses the schema the analysis reads. On hardware
+there is no external reference, so the ground-truth columns are absent and the
+tool reports RMSE as **unavailable** rather than silently computing it against
+zeros. Filter output, gate statistics and the bias estimate are still produced.
+Verified by `test_kalman.py::TestRunProfileAndCsv` and
+`test_integration.py::test_logged_timeseries_feeds_the_fusion_analysis`.
+
+---
+
+## 3. Navigation controller
+
+```bash
+python tools/tune_pid.py --check
+```
+
+Closed loop over rendered frames, driving the real extractor and the real
+mixer, from a deliberately bad start (4 cm off the row, yawed 4°):
+
+```
+Configured gains: kp=0.85 ki=0.02 kd=0.05 output_limit=0.5
+  settled RMS lateral error : 0.22 mm
+  final lateral error       : -0.22 mm
+  peak heading excursion    : 8.1 deg
+  frames with no line       : 0
+```
+
+The proposal's claim is "holding the robot centred to within a few
+millimetres". Measured: **0.22 mm** RMS.
+
+Convergence from five different bad starts (±5 cm lateral, ±10° heading) is
+asserted in `test_integration.py::test_converges_from_a_range_of_bad_starts`.
+
+---
+
+## 4. Perception throughput
+
+```bash
+python tools/bench_perception.py --frames 120
+```
+
+640×480 synthetic arena frames, laptop CPU, colour tier only (the shipped
+default):
+
+| Stage | mean | p95 | fps |
+|---|---:|---:|---:|
+| Line following (HSV + moments) | 1.85 ms | 2.21 ms | 541 |
+| Colour tier (Tier 1) | 3.27 ms | 4.11 ms | 306 |
+| **Full pipeline** | **5.12 ms** | 6.24 ms | **195** |
+
+At 0.18 m/s a marker stays inside a 0.40 m working envelope for 2.2 s, which
+at this rate is 434 frames; the tracker needs 3 to confirm. That is a **145×**
+margin, so the learned tier has ample headroom on the Jetson even at the
+~18 fps reported for this model class in the literature.
+
+---
+
+## 5. End-to-end mission
+
+```bash
+python -m agribot.app.simulate --seconds 45 --rows 1 --report
+```
+
+The complete unmodified runtime against the mock MCU and the synthetic arena
+(2 crops, 3 weeds, one of them on the 15 cm elevated surface):
+
+```
+  MISSION SUMMARY - 21.9 s, 3.15 m, 1 row(s)
+  Navigation
+    line lock rate        : 87.1% of 729 frames
+    mean |line error|     : 0.0116 (max 0.3496)
+    encoder samples gated : 0/729 (0.0%)
+  Perception
+    weeds treated         : 3 of 3 detected
+    crops seen / vetoed   : 2 / 0
+    crops sprayed         : 0  (protection 100.0%)
+  Sustainability
+    fluid used            : 5.76 ml (measured)
+    per weed              : 1.92 ml
+    blanket equivalent    : 18.9 ml @ 20 ml/m2
+    saving                : 69.5% (3.3x less)
+  final lateral error   : -0.01 cm
+  lateral RMS after 3 s : 0.05 cm
+```
+
+The 13 % of frames without a line are the deliberate blind creep at the row
+end — that is *how* the row end is detected, not a failure.
+
+Two rows, exercising the row-end turn:
+
+```
+$ python -m agribot.app.simulate --seconds 120 --rows 2 --report
+  MISSION SUMMARY - 28.2 s, 3.51 m, 2 row(s)
+```
+
+Transition trace for that run:
+
+```
+ 0.03s  INIT         -> FOLLOW_LINE   (line acquired)
+ 0.72s  FOLLOW_LINE  -> STOP_AND_AIM  (weed confirmed (track 1))
+ 0.72s  STOP_AND_AIM -> SPRAY         (burst started)
+ 1.56s  SPRAY        -> LOG_EVENT     (burst complete)
+ 2.19s  LOG_EVENT    -> FOLLOW_LINE   (clear of target)
+ ...
+21.87s  FOLLOW_LINE  -> TURN          (row 1 end)
+25.17s  TURN         -> FOLLOW_LINE   (turn complete)
+```
+
+---
+
+## 6. Claims that are demonstrated rather than asserted
+
+These are the tests worth reading, because each one reproduces a failure the
+design exists to prevent.
+
+### The adaptive innovation gate really does fail
+
+`test_kalman.py::TestFixedVsAdaptiveGate` runs the identical filter with only
+the gate swapped. Measured on the shipped parameters:
+
+| Coast duration | Fixed gate threshold | 3σ adaptive threshold |
+|---:|---:|---:|
+| settled | 0.0500 m/s | 0.019 m/s |
+| 5 s | 0.0500 m/s | 0.081 m/s |
+| 20 s | 0.0500 m/s | 0.388 m/s |
+| 60 s | 0.0500 m/s | 1.743 m/s |
+
+The adaptive gate admits a 0.25 m/s wheel-spin sample after **14.1 s** of
+continuous spin; the fixed gate admitted **0 of 100 000** spin samples over
+2000 s. This is the failure the proposal describes as "observed directly during
+development".
+
+### Crop protection is structural
+
+`test_vision.py::TestPerceptionFusion` asserts that a 0.99-confidence weed
+adjacent to a **0.36**-confidence crop produces **no action**. The asymmetry
+lives in the rule, so it cannot be undone by lowering a confidence threshold.
+
+`test_integration.py::TestCropProtectionUnderPressure` places a weed 4.5 cm
+from a crop in a full mission and asserts `crops_sprayed == 0` with a non-zero
+veto count. Across four seeds, no run ever sprays a crop.
+
+The runtime additionally *checks* rather than trusts the invariant: if a
+non-weed track ever reaches actuation, `AgriBotRuntime._begin_spray` refuses,
+records a fault, and `main.py` exits with code 2.
+
+### Glare is not mistaken for a line
+
+`test_vision.py::TestLineFollower` renders specular glare with no line present
+at three intensities and asserts `found is False` for all of them. With glare
+completely overlapping the line, the merged blob's centroid sits 48 px off the
+true line, so the extractor reports *lost* — which routes to the grace period
+and the IR fail-safe rather than steering the robot into a reflection.
+
+### The MCU watchdog stops the robot
+
+`test_hal.py::test_watchdog_stops_the_drive_when_heartbeats_stop` and
+`test_integration.py::test_mcu_silence_escalates_to_estop` verify both halves:
+the MCU zeroes the motors on heartbeat loss, and the mission state machine
+escalates a stale link to ESTOP.
+
+### Doses are measured, never estimated silently
+
+`test_targeting.py` asserts that a burst with no flow registered is flagged
+`measured=False` and falls back to the nominal dose, and
+`test_integration.py::test_every_dose_is_flow_measured` asserts a full mission
+reports `fully_measured=True`.
+
+---
+
+## 7. Bugs found by this suite
+
+Recorded because each one is now regression-locked, and because they show what
+the tests were actually for.
+
+| Defect | Consequence had it shipped | Caught by |
+|---|---|---|
+| `mix()` and `turn()` used opposite sign conventions | Line follower steers *away* from the line; loop diverges | Closed-loop convergence check |
+| Arena renderer tilted the line the wrong way | Trains the loop against inverted geometry; gains tuned to a fiction | Heading-sweep geometry check |
+| Specular glare passed the line HSV gate | Robot steers toward a sun reflection | `test_glare_alone_is_not_mistaken_for_a_line` |
+| `RECOVER` halted, but row end is distance-based | Mission deadlocks permanently on line loss | `test_recover_probes_forward_rather_than_deadlocking` |
+| 180° turn compared against start heading | Completion window is skippable; robot spins for ever | `test_angle_swept_accumulates_through_the_180_seam` |
+| Blind-travel counter not rebased after a turn | Row 2 declared over the instant the turn ends | `test_next_row_is_not_declared_over_the_instant_the_turn_ends` |
+| Fixed gate blocked cold start | Filter started mid-motion never acquires | `test_first_sample_initialises_rather_than_being_gated` |
+| Mock accelerometer reported bias only | 63 % of encoder samples gated out spuriously | `test_accelerometer_reports_real_acceleration` |
+| `self._start_t or now` with a 0.0 start | Every logged timestamp is zero; logs unusable for replay | `test_logged_timeseries_feeds_the_fusion_analysis` |
+| `json_safe` checked `dict`, not `Mapping` | Run summary crashes when logging the config | `test_a_run_writes_a_complete_log_set` |
+| `extract_roi` could return an empty slice | Every downstream op raises on a degenerate ROI | `test_roi_is_never_empty` |
+
+---
+
+## 8. What is *not* verified here
+
+Stated plainly, because the gap matters more than the coverage number.
+
+- **No hardware in the loop.** Every result above comes from simulation or unit
+  tests. The mock MCU models motor lag, sensor bias, noise, wheel slip and the
+  heartbeat watchdog, but it is not the robot. Nothing here substitutes for a
+  run on the real chassis.
+- **The learned tier has not been trained or benchmarked.** Tiers 2 and 3 are
+  implemented, configurable and tested for graceful absence, but no weights
+  exist yet. The ~92 % mAP@0.5 and ~18 fps figures in the proposal are cited
+  from the literature, not measured here.
+- **The synthetic arena is not the competition arena.** It models uneven
+  illumination, glare, soil speckle and motion blur, and it uses the exact
+  colours the config thresholds target — which makes it a good test of the
+  *code* and a poor test of the *thresholds*. Field HSV calibration
+  ([CALIBRATION.md](CALIBRATION.md)) is not optional.
+- **Spray dynamics are modelled as a constant flow rate.** Real nozzle spin-up,
+  droplet spread and overspray are not simulated. The ml-per-weed figure the
+  robot reports will come from the flow sensor, not from this model.
+- **Mechanical CAD is out of scope** for this repository, and the 30 cm
+  bounding-box check in preflight validates the *configured* dimensions, not
+  the built robot.

@@ -1,0 +1,73 @@
+# ============================================================================
+#  AgriBot mission service - Robofest Gujarat 6.0
+#
+#  Install:
+#    sudo cp deploy/agribot.service /etc/systemd/system/
+#    sudo systemctl daemon-reload
+#    sudo systemctl enable agribot          # start on boot
+#    sudo systemctl start agribot
+#
+#  Watch:  journalctl -u agribot -f
+#  Stop:   sudo systemctl stop agribot      (SIGTERM -> orderly shutdown)
+#
+#  The service is deliberately NOT enabled by the installer. A robot that
+#  starts driving the moment it is powered on is a hazard on a bench, and in
+#  the arena the run should begin when the team says so.
+# ============================================================================
+
+[Unit]
+Description=AgriBot autonomous precision agriculture mission
+Documentation=file:///opt/agribot/docs/RUNBOOK.md
+# The camera and the MCU appear as udev devices; waiting for them avoids a
+# start-up race that would otherwise fail the run on a cold boot.
+After=multi-user.target dev-ttyACM0.device
+Wants=dev-ttyACM0.device
+
+[Service]
+Type=simple
+User=agribot
+Group=agribot
+# dialout: serial access to the MCU. video: camera access.
+SupplementaryGroups=dialout video
+
+WorkingDirectory=/opt/agribot
+Environment=PYTHONUNBUFFERED=1
+Environment=AGRIBOT_CONFIG=/opt/agribot/config/robot.yaml
+# Uncomment to force a dry run (navigate and perceive, never open the valve):
+# Environment=AGRIBOT_SPRAY__ENABLED=false
+
+ExecStartPre=/opt/agribot/.venv/bin/python -m agribot.app.preflight
+ExecStart=/opt/agribot/.venv/bin/python -m agribot.app.main
+
+# SIGTERM is handled by main.py and funnels into the orderly shutdown path:
+# motors off, valve shut, pump off. 15 s is far longer than that needs, but a
+# SIGKILL mid-burst would leave the solenoid latched open, so the margin is
+# deliberate. The MCU's own valve timer is the backstop if this ever fails.
+KillSignal=SIGTERM
+TimeoutStopSec=15
+KillMode=mixed
+
+# Do NOT restart automatically. A mission that aborted did so for a reason -
+# an obstacle, an empty reservoir, a fault - and silently re-running it would
+# send the robot off again unattended with the same fault.
+Restart=no
+
+# Resource protection: perception is the point of the machine, so it must not
+# be starved by logging or a runaway subprocess.
+Nice=-5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=2
+
+# Filesystem hardening. The service needs to write only its own logs.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/opt/agribot/data /opt/agribot/models
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=agribot
+
+[Install]
+WantedBy=multi-user.target

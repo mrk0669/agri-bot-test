@@ -1,0 +1,4 @@
+# Learned-detector tier. On Jetson install torch/torchvision from the
+# NVIDIA JetPack wheel index FIRST, then this file with --no-deps for torch.
+-r requirements.txt
+ultralytics>=8.0

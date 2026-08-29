@@ -1,0 +1,1445 @@
+<title>AgriBot Architecture Plates</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600&display=swap">
+
+<style>
+/* ── tokens ─────────────────────────────────────────────────────────────
+   Light is the base set. Neutrals carry a deliberate green-grey bias so
+   they read as chosen rather than inherited from a generic grey ramp.   */
+:root{
+  --paper:#F2F4F1;
+  --sheet:#FAFBF9;
+  --box:#FFFFFF;
+  --ink:#131A17;
+  --ink-2:#4A554F;
+  --ink-3:#67726C;
+  --rule:#D7DCD7;
+  --rule-2:#B4BDB6;
+  --signal:#0E7C86;
+  --signal-soft:#E2F0F1;
+  --crop:#2F7D4F;
+  --crop-soft:#E4F0E8;
+  --weed:#C0392B;
+  --weed-soft:#F8E6E3;
+  --warn:#8C5A11;
+  --warn-soft:#F7EEDC;
+  --shadow:0 1px 2px rgba(19,26,23,.05),0 8px 24px -12px rgba(19,26,23,.16);
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --display:"Chivo",var(--sans);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0B110F;
+    --sheet:#111A17;
+    --box:#16211D;
+    --ink:#E7ECE8;
+    --ink-2:#A5B1AA;
+    --ink-3:#8B978F;
+    --rule:#25322D;
+    --rule-2:#3A4A43;
+    --signal:#43C2CB;
+    --signal-soft:#123033;
+    --crop:#5CBA80;
+    --crop-soft:#14291D;
+    --weed:#E8705F;
+    --weed-soft:#2E1714;
+    --warn:#DDA945;
+    --warn-soft:#2C2313;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0B110F;
+  --sheet:#111A17;
+  --box:#16211D;
+  --ink:#E7ECE8;
+  --ink-2:#A5B1AA;
+  --ink-3:#8B978F;
+  --rule:#25322D;
+  --rule-2:#3A4A43;
+  --signal:#43C2CB;
+  --signal-soft:#123033;
+  --crop:#5CBA80;
+  --crop-soft:#14291D;
+  --weed:#E8705F;
+  --weed-soft:#2E1714;
+  --warn:#DDA945;
+  --warn-soft:#2C2313;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px 96px}
+
+/* ── masthead ─────────────────────────────────────────────────────── */
+.masthead{padding:64px 0 40px;border-bottom:1px solid var(--rule)}
+.eyebrow{
+  font-family:var(--mono);font-size:11px;font-weight:500;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--signal);
+  margin:0 0 18px;
+}
+h1{
+  font-family:var(--display);font-weight:900;
+  font-size:clamp(2.1rem,5.2vw,3.5rem);line-height:1.02;
+  letter-spacing:-.02em;margin:0 0 20px;text-wrap:balance;max-width:20ch;
+}
+.standfirst{
+  max-width:64ch;font-size:1.06rem;color:var(--ink-2);margin:0 0 28px;
+}
+.meta{
+  display:flex;flex-wrap:wrap;gap:0 32px;
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-3);
+  padding-top:20px;border-top:1px solid var(--rule);
+}
+.meta b{color:var(--ink-2);font-weight:500}
+
+/* ── contents ─────────────────────────────────────────────────────── */
+.toc{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));
+  gap:1px;background:var(--rule);border:1px solid var(--rule);
+  margin:40px 0 8px;
+}
+.toc a{
+  display:flex;gap:12px;align-items:baseline;
+  background:var(--sheet);padding:14px 16px;text-decoration:none;color:var(--ink);
+}
+.toc a:hover{background:var(--signal-soft)}
+.toc a:focus-visible{outline:2px solid var(--signal);outline-offset:-2px}
+.toc .n{font-family:var(--mono);font-size:11px;color:var(--signal);font-weight:600}
+.toc .t{font-size:13.5px;line-height:1.3}
+
+/* ── prose ────────────────────────────────────────────────────────── */
+.prose{max-width:66ch}
+.prose p{margin:0 0 18px}
+h2{
+  font-family:var(--display);font-weight:700;
+  font-size:1.55rem;letter-spacing:-.01em;margin:56px 0 14px;text-wrap:balance;
+}
+h3{font-family:var(--display);font-weight:600;font-size:1.1rem;margin:32px 0 10px}
+code{
+  font-family:var(--mono);font-size:.86em;
+  background:var(--signal-soft);color:var(--ink);padding:.12em .38em;border-radius:2px;
+}
+strong{font-weight:600}
+
+/* ── plates ───────────────────────────────────────────────────────── */
+.plate{
+  margin:44px 0 0;background:var(--sheet);
+  border:1px solid var(--rule-2);box-shadow:var(--shadow);
+}
+.titleblock{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px;
+  padding:12px 18px;border-bottom:1px solid var(--rule-2);
+  font-family:var(--mono);font-size:11px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);
+}
+.titleblock .id{color:var(--signal);font-weight:600}
+.titleblock .name{
+  color:var(--ink);font-weight:500;letter-spacing:.04em;
+  font-size:12px;flex:1 1 auto;
+}
+.canvas{padding:22px 18px;overflow-x:auto}
+.plate figure{margin:0}
+.plate figcaption{
+  max-width:78ch;padding:0 18px 20px;
+  font-size:14px;line-height:1.55;color:var(--ink-2);
+}
+.plate figcaption b{color:var(--ink);font-weight:600}
+
+svg{display:block;max-width:100%;height:auto}
+svg text{font-family:var(--mono);font-size:12px;fill:var(--ink)}
+svg .t-sm{font-size:10.5px}
+svg .t-mut{fill:var(--ink-3)}
+svg .t-band{font-size:10px;fill:var(--ink-3);letter-spacing:.14em}
+svg .t-sig{fill:var(--signal)}
+svg .t-crop{fill:var(--crop)}
+svg .t-weed{fill:var(--weed)}
+svg .t-warn{fill:var(--warn)}
+svg .t-b{font-weight:600}
+svg .box{fill:var(--box);stroke:var(--rule-2);stroke-width:1}
+svg .box-sig{fill:var(--signal-soft);stroke:var(--signal);stroke-width:1}
+svg .box-crop{fill:var(--crop-soft);stroke:var(--crop);stroke-width:1}
+svg .box-weed{fill:var(--weed-soft);stroke:var(--weed);stroke-width:1}
+svg .box-warn{fill:var(--warn-soft);stroke:var(--warn);stroke-width:1}
+svg .zone{fill:none;stroke:var(--rule-2);stroke-width:1;stroke-dasharray:5 4}
+svg .flow{stroke:var(--ink-3);stroke-width:1.4;fill:none}
+svg .flow-sig{stroke:var(--signal);stroke-width:1.6;fill:none}
+svg .flow-crop{stroke:var(--crop);stroke-width:1.6;fill:none}
+svg .flow-weed{stroke:var(--weed);stroke-width:1.6;fill:none}
+svg .flow-warn{stroke:var(--warn);stroke-width:1.6;fill:none}
+svg .flow-dash{stroke:var(--ink-3);stroke-width:1.2;fill:none;stroke-dasharray:4 4}
+svg .rule{stroke:var(--rule);stroke-width:1}
+
+/* ── notes ────────────────────────────────────────────────────────── */
+.note{
+  max-width:70ch;margin:22px 0;padding:14px 18px;
+  border-left:2px solid var(--signal);background:var(--signal-soft);
+  font-size:14.5px;line-height:1.55;
+}
+.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.note p{margin:0 0 10px}
+.note p:last-child{margin:0}
+
+table{border-collapse:collapse;width:100%;font-size:14px;margin:18px 0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);font-weight:500;
+}
+td code{background:none;padding:0;color:var(--signal)}
+.tbl-wrap{overflow-x:auto}
+
+footer{
+  margin-top:72px;padding-top:24px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-3);
+}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:640px){
+  .masthead{padding:40px 0 28px}
+  .canvas{padding:16px 12px}
+  .plate figcaption{padding:0 12px 16px}
+}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Robofest Gujarat 6.0 · Track (f) — Robots for Sustainability</p>
+  <h1>AgriBot Architecture Plates</h1>
+  <p class="standfirst">
+    The complete signal path of the autonomous precision-spraying rover — from
+    photons on the sensor to a metered burst on a weed — drawn as eight plates.
+    Each plate maps to a figure in the ideation proposal and to the module that
+    implements it.
+  </p>
+  <div class="meta">
+    <span><b>Team</b> VNIT Nagpur</span>
+    <span><b>Compute</b> Jetson Orin Nano + custom-PCB MCU</span>
+    <span><b>Envelope</b> 30 × 30 × 30 cm</span>
+    <span><b>Verified</b> 418 tests · 90 % coverage</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Plate index">
+  <a href="#p1"><span class="n">01</span><span class="t">System architecture</span></a>
+  <a href="#p2"><span class="n">02</span><span class="t">Runtime tick order</span></a>
+  <a href="#p3"><span class="n">03</span><span class="t">Navigation pipeline</span></a>
+  <a href="#p4"><span class="n">04</span><span class="t">Perception &amp; crop veto</span></a>
+  <a href="#p5"><span class="n">05</span><span class="t">Kalman sensor fusion</span></a>
+  <a href="#p6"><span class="n">06</span><span class="t">Mission state machine</span></a>
+  <a href="#p7"><span class="n">07</span><span class="t">Intervention sequence</span></a>
+  <a href="#p8"><span class="n">08</span><span class="t">Safety layers</span></a>
+</nav>
+
+
+<!-- ══════════════════════════════ PLATE 01 ══════════════════════════ -->
+<h2 id="p1">01 · System architecture</h2>
+<div class="prose">
+  <p>
+    Computation splits across two tiers. The Jetson does perception and
+    decision-making; the microcontroller does hard real-time actuation. They
+    exchange one checksummed line protocol. The split is not only about
+    throughput — because the MCU owns the actuators, it can stop the robot
+    without the Jetson's help.
+  </p>
+</div>
+
+<section class="plate">
+  <div class="titleblock">
+    <span class="id">Plate 01</span>
+    <span class="name">Complete system architecture — perception, decision, actuation, power</span>
+    <span>Proposal Fig. 3</span>
+  </div>
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 1200 782" role="img"
+           aria-label="Two-tier system architecture. Sensors feed either the Jetson or the microcontroller. On the Jetson, camera frames drive a line follower and three detector tiers; detections pass through crop-vetoing fusion and a tracker; MCU telemetry drives a Kalman fusion stack. All three converge on the mission state machine, which is the only producer of a drive command, and which triggers the targeting solver and spray controller. Commands cross a checksummed serial link to the MCU, which drives motors, servos, pump and valve. A battery and buck converters supply separate 12 volt and 5 volt rails.">
+        <defs>
+          <marker id="p1a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/>
+          </marker>
+          <marker id="p1s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--signal)"/>
+          </marker>
+        </defs>
+
+        <!-- column band labels -->
+        <text class="t-band" x="24"   y="24">SENSORS</text>
+        <text class="t-band" x="222"  y="24">COMPUTE — TWO TIERS</text>
+        <text class="t-band" x="896"  y="24">ACTUATORS</text>
+        <text class="t-band" x="1090" y="24">POWER</text>
+
+        <!-- ── JETSON TIER ── -->
+        <rect class="zone" x="222" y="36" width="644" height="412" rx="2"/>
+        <text class="t-sm t-b t-sig" x="238" y="54">NVIDIA JETSON ORIN NANO</text>
+        <text class="t-sm t-mut" x="700" y="54">perception · decision · logging</text>
+
+        <text class="t-band" x="238" y="72">PERCEPTION</text>
+
+        <rect class="box" x="238" y="80" width="176" height="44" rx="2"/>
+        <text class="t-sm t-b" x="248" y="98">LineFollower</text>
+        <text class="t-sm t-mut" x="248" y="113">HSV · morphology · moments</text>
+
+        <rect class="box" x="238" y="132" width="176" height="36" rx="2"/>
+        <text class="t-sm" x="248" y="147">IrLineSensor</text>
+        <text class="t-sm t-mut" x="248" y="161">fail-safe · only when lost</text>
+
+        <rect class="box-crop" x="430" y="80" width="196" height="26" rx="2"/>
+        <text class="t-sm t-b" x="440" y="97">Tier 1 · ColorDetector</text>
+        <rect class="box" x="430" y="112" width="196" height="26" rx="2"/>
+        <text class="t-sm" x="440" y="129">Tier 2 · YOLO11n TensorRT</text>
+        <rect class="box" x="430" y="144" width="196" height="26" rx="2"/>
+        <text class="t-sm" x="440" y="161">Tier 3 · YOLO-World zero-shot</text>
+
+        <rect class="box-sig" x="642" y="80" width="208" height="90" rx="2"/>
+        <text class="t-sm t-b t-sig" x="652" y="98">FusionStack · Kalman</text>
+        <text class="t-sm t-mut" x="652" y="115">heading [θ, gyro bias]</text>
+        <text class="t-sm t-mut" x="652" y="130">distance [x, v, accel bias]</text>
+        <text class="t-sm t-mut" x="652" y="145">predict 100 Hz · update 50 Hz</text>
+        <text class="t-sm t-warn" x="652" y="161">fixed gate 0.05 m/s</text>
+
+        <text class="t-band" x="238" y="200">DECISION</text>
+
+        <rect class="box" x="238" y="208" width="176" height="38" rx="2"/>
+        <text class="t-sm t-b" x="248" y="224">PID</text>
+        <text class="t-sm t-mut" x="248" y="238">kp .85 · ki .02 · kd .05</text>
+
+        <rect class="box" x="238" y="254" width="176" height="36" rx="2"/>
+        <text class="t-sm" x="248" y="269">DifferentialMixer</text>
+        <text class="t-sm t-mut" x="248" y="283">+corr = turn left</text>
+
+        <rect class="box-weed" x="430" y="208" width="196" height="42" rx="2"/>
+        <text class="t-sm t-b" x="440" y="225">PerceptionFusion</text>
+        <text class="t-sm t-weed" x="440" y="241">crop veto — hard, asymmetric</text>
+
+        <rect class="box" x="430" y="256" width="196" height="34" rx="2"/>
+        <text class="t-sm" x="440" y="270">TargetTracker</text>
+        <text class="t-sm t-mut" x="440" y="284">confirm 3 frames</text>
+
+        <!-- FSM strip -->
+        <rect class="box-sig" x="238" y="308" width="612" height="44" rx="2"/>
+        <text class="t-sm t-b t-sig" x="250" y="326">MissionStateMachine</text>
+        <text class="t-sm t-mut" x="250" y="342">the only producer of a drive command · safety evaluated before state logic</text>
+
+        <text class="t-band" x="238" y="376">INTERVENTION &amp; TELEMETRY</text>
+
+        <rect class="box" x="238" y="384" width="176" height="42" rx="2"/>
+        <text class="t-sm t-b" x="248" y="401">PixelToAngleSolver</text>
+        <text class="t-sm t-mut" x="248" y="416">px → pan/tilt (+ depth)</text>
+
+        <rect class="box" x="430" y="384" width="196" height="42" rx="2"/>
+        <text class="t-sm t-b" x="440" y="401">SprayController</text>
+        <text class="t-sm t-mut" x="440" y="416">non-blocking burst FSM</text>
+
+        <rect class="box" x="642" y="384" width="208" height="42" rx="2"/>
+        <text class="t-sm t-b" x="652" y="401">RunLogger · Metrics</text>
+        <text class="t-sm t-mut" x="652" y="416">events · timeseries · ml/weed</text>
+
+        <!-- ── SENSORS to Jetson ── -->
+        <rect class="box" x="24" y="94" width="168" height="46" rx="2"/>
+        <text class="t-sm t-b" x="34" y="112">Global-shutter RGB</text>
+        <text class="t-sm t-mut" x="34" y="128">640×480 · 30 fps</text>
+
+        <rect class="box" x="24" y="150" width="168" height="38" rx="2"/>
+        <text class="t-sm" x="34" y="165">Depth (optional)</text>
+        <text class="t-sm t-mut" x="34" y="179">RealSense D435i</text>
+
+        <path class="flow-sig" d="M192,117 H214 V102 H238" marker-end="url(#p1s)"/>
+        <text class="t-sm t-sig" x="196" y="88">frame</text>
+        <path class="flow" d="M192,117 H214 V93 H430" marker-end="url(#p1a)"/>
+        <path class="flow-dash" d="M192,169 H222 V405 H238" marker-end="url(#p1a)"/>
+        <text class="t-sm t-mut" x="196" y="200">range</text>
+
+        <!-- internal Jetson flows -->
+        <path class="flow" d="M326,124 V208" marker-end="url(#p1a)"/>
+        <text class="t-sm t-mut" x="332" y="170">error</text>
+        <path class="flow" d="M326,246 V254" marker-end="url(#p1a)"/>
+        <path class="flow" d="M326,290 V308" marker-end="url(#p1a)"/>
+        <text class="t-sm t-mut" x="332" y="303">drive</text>
+
+        <path class="flow" d="M528,170 V208" marker-end="url(#p1a)"/>
+        <text class="t-sm t-mut" x="534" y="192">detections</text>
+        <path class="flow" d="M528,250 V256" marker-end="url(#p1a)"/>
+        <path class="flow" d="M528,290 V308" marker-end="url(#p1a)"/>
+        <text class="t-sm t-mut" x="534" y="303">targets</text>
+
+        <path class="flow-sig" d="M746,170 V308" marker-end="url(#p1s)"/>
+        <text class="t-sm t-sig" x="752" y="245">pose</text>
+
+        <path class="flow" d="M326,352 V384" marker-end="url(#p1a)"/>
+        <text class="t-sm t-mut" x="332" y="372">engage</text>
+        <path class="flow" d="M414,405 H430" marker-end="url(#p1a)"/>
+        <path class="flow-dash" d="M626,405 H642" marker-end="url(#p1a)"/>
+
+        <!-- ── SERIAL LINK ── -->
+        <rect class="box-sig" x="222" y="468" width="644" height="46" rx="2"/>
+        <text class="t-sm t-b t-sig" x="238" y="486">SERIAL LINK · 115 200 baud</text>
+        <text class="t-sm t-mut" x="238" y="503">$&lt;payload&gt;*&lt;XX&gt;\n — XOR checksum · corrupt frames dropped, commands re-sent at 50 Hz</text>
+
+        <path class="flow-sig" d="M300,426 V468" marker-end="url(#p1s)"/>
+        <text class="t-sm t-sig" x="306" y="446">$M,l,r</text>
+        <path class="flow-sig" d="M520,426 V468" marker-end="url(#p1s)"/>
+        <text class="t-sm t-sig" x="526" y="446">$V,$P,$S</text>
+        <path class="flow-sig" d="M790,468 V352" marker-end="url(#p1s)"/>
+        <text class="t-sm t-sig" x="796" y="446">$T telemetry</text>
+
+        <path class="flow-sig" d="M300,514 V546" marker-end="url(#p1s)"/>
+        <path class="flow-sig" d="M520,514 V546" marker-end="url(#p1s)"/>
+        <path class="flow-sig" d="M790,546 V514" marker-end="url(#p1s)"/>
+
+        <!-- ── MCU TIER ── -->
+        <rect class="zone" x="222" y="546" width="644" height="200" rx="2"/>
+        <text class="t-sm t-b t-sig" x="238" y="566">MICROCONTROLLER — CUSTOM PCB</text>
+        <text class="t-sm t-mut" x="700" y="566">hard real time</text>
+
+        <rect class="box" x="238" y="578" width="140" height="34" rx="2"/>
+        <text class="t-sm" x="248" y="599">Motor PWM</text>
+        <rect class="box" x="238" y="620" width="140" height="34" rx="2"/>
+        <text class="t-sm" x="248" y="641">Encoder ISR</text>
+        <rect class="box" x="238" y="662" width="140" height="34" rx="2"/>
+        <text class="t-sm" x="248" y="683">Servo drive</text>
+
+        <rect class="box" x="392" y="578" width="150" height="34" rx="2"/>
+        <text class="t-sm" x="402" y="599">Solenoid + pump</text>
+        <rect class="box" x="392" y="620" width="150" height="34" rx="2"/>
+        <text class="t-sm" x="402" y="641">Ultrasonic ping</text>
+        <rect class="box" x="392" y="662" width="150" height="34" rx="2"/>
+        <text class="t-sm" x="402" y="683">Flow tick ISR</text>
+
+        <rect class="box-warn" x="556" y="578" width="152" height="52" rx="2"/>
+        <text class="t-sm t-b t-warn" x="566" y="597">Heartbeat watchdog</text>
+        <text class="t-sm t-mut" x="566" y="612">no $H for 500 ms</text>
+        <text class="t-sm t-mut" x="566" y="625">→ motors + valve off</text>
+
+        <rect class="box-warn" x="556" y="638" width="152" height="52" rx="2"/>
+        <text class="t-sm t-b t-warn" x="566" y="657">Valve max-open</text>
+        <text class="t-sm t-mut" x="566" y="672">1500 ms hard cap</text>
+        <text class="t-sm t-mut" x="566" y="685">lost frame ≠ empty tank</text>
+
+        <rect class="box" x="722" y="578" width="128" height="52" rx="2"/>
+        <text class="t-sm" x="732" y="597">Telemetry TX</text>
+        <text class="t-sm t-mut" x="732" y="612">14 fields</text>
+        <text class="t-sm t-mut" x="732" y="625">100 Hz</text>
+
+        <rect class="box" x="722" y="638" width="128" height="52" rx="2"/>
+        <text class="t-sm" x="732" y="657">IMU read</text>
+        <text class="t-sm t-mut" x="732" y="672">BNO055 NDOF</text>
+        <text class="t-sm t-mut" x="732" y="685">NaN if uncal.</text>
+
+        <!-- ── SENSORS to MCU ── -->
+        <rect class="box" x="24" y="578" width="168" height="30" rx="2"/>
+        <text class="t-sm" x="34" y="597">IMU · BNO055</text>
+        <rect class="box" x="24" y="614" width="168" height="30" rx="2"/>
+        <text class="t-sm" x="34" y="633">Encoders × 4</text>
+        <rect class="box" x="24" y="650" width="168" height="30" rx="2"/>
+        <text class="t-sm" x="34" y="669">Ultrasonic × 2</text>
+        <rect class="box" x="24" y="686" width="168" height="30" rx="2"/>
+        <text class="t-sm" x="34" y="705">QTR-8A IR array</text>
+        <rect class="box" x="24" y="722" width="168" height="30" rx="2"/>
+        <text class="t-sm" x="34" y="741">Flow · battery sense</text>
+
+        <path class="flow" d="M192,593 H238" marker-end="url(#p1a)"/>
+        <path class="flow" d="M192,629 H214 V641 H238" marker-end="url(#p1a)"/>
+        <path class="flow" d="M192,665 H206 V683 H238" marker-end="url(#p1a)"/>
+        <path class="flow" d="M192,701 H210 V637 H392" marker-end="url(#p1a)"/>
+        <path class="flow" d="M192,737 H218 V679 H392" marker-end="url(#p1a)"/>
+
+        <!-- ── ACTUATORS ── -->
+        <rect class="box" x="896" y="578" width="170" height="34" rx="2"/>
+        <text class="t-sm" x="906" y="592">Motor drivers × 2</text>
+        <text class="t-sm t-mut" x="906" y="606">→ 4 gear motors</text>
+
+        <rect class="box" x="896" y="620" width="170" height="34" rx="2"/>
+        <text class="t-sm" x="906" y="634">Pan + tilt servos</text>
+        <text class="t-sm t-mut" x="906" y="648">MG996R metal gear</text>
+
+        <rect class="box" x="896" y="662" width="170" height="30" rx="2"/>
+        <text class="t-sm" x="906" y="681">Diaphragm pump</text>
+
+        <rect class="box-weed" x="896" y="700" width="170" height="30" rx="2"/>
+        <text class="t-sm t-b" x="906" y="719">Solenoid valve</text>
+
+        <rect class="box" x="896" y="738" width="170" height="26" rx="2"/>
+        <text class="t-sm" x="906" y="755">Marker servo (alt.)</text>
+
+        <path class="flow" d="M378,595 H866 V595 H896" marker-end="url(#p1a)"/>
+        <path class="flow" d="M850,637 H896" marker-end="url(#p1a)"/>
+        <path class="flow" d="M542,679 H872 V677 H896" marker-end="url(#p1a)"/>
+        <path class="flow-weed" d="M542,595 H560 M708,604 H872 V715 H896" marker-end="url(#p1a)"/>
+        <path class="flow" d="M850,690 H874 V751 H896" marker-end="url(#p1a)"/>
+
+        <!-- ── POWER ── -->
+        <rect class="zone" x="1090" y="36" width="86" height="710" rx="2"/>
+        <rect class="box-warn" x="1098" y="52" width="70" height="52" rx="2"/>
+        <text class="t-sm t-b t-warn" x="1106" y="70">11.1 V</text>
+        <text class="t-sm t-mut" x="1106" y="84">LiPo</text>
+        <text class="t-sm t-mut" x="1106" y="97">+ BMS</text>
+
+        <rect class="box" x="1098" y="120" width="70" height="46" rx="2"/>
+        <text class="t-sm t-b" x="1106" y="138">12 V</text>
+        <text class="t-sm t-mut" x="1106" y="152">motors</text>
+        <text class="t-sm t-mut" x="1106" y="164">pump</text>
+
+        <rect class="box" x="1098" y="182" width="70" height="46" rx="2"/>
+        <text class="t-sm t-b" x="1106" y="200">5 V</text>
+        <text class="t-sm t-mut" x="1106" y="214">servos</text>
+        <text class="t-sm t-mut" x="1106" y="226">MCU</text>
+
+        <rect class="box-sig" x="1098" y="244" width="70" height="46" rx="2"/>
+        <text class="t-sm t-b t-sig" x="1106" y="262">5 V/4 A</text>
+        <text class="t-sm t-mut" x="1106" y="276">Jetson</text>
+        <text class="t-sm t-mut" x="1106" y="288">rail</text>
+
+        <text class="t-sm t-mut" x="1098" y="316">buck</text>
+        <text class="t-sm t-mut" x="1098" y="330">LM2596</text>
+        <text class="t-sm t-mut" x="1098" y="352">inductive</text>
+        <text class="t-sm t-mut" x="1098" y="366">loads kept</text>
+        <text class="t-sm t-mut" x="1098" y="380">off logic</text>
+        <text class="t-sm t-mut" x="1098" y="394">rail</text>
+
+        <path class="flow-dash" d="M1098,104 H1084 V143 H1098"/>
+        <path class="flow-dash" d="M1084,143 V205 H1098"/>
+        <path class="flow-dash" d="M1084,205 V267 H1098"/>
+        <path class="flow-dash" d="M1098,143 H1080 V595 H1066" marker-end="url(#p1a)"/>
+        <path class="flow-dash" d="M1076,205 V637 H1066" marker-end="url(#p1a)"/>
+        <path class="flow-dash" d="M1072,143 V677 H1066" marker-end="url(#p1a)"/>
+        <path class="flow-dash" d="M1098,267 H1072 V242 H866" marker-end="url(#p1a)"/>
+      </svg>
+    </div>
+    <figcaption>
+      Every arrow is a real dependency in <b>src/agribot</b>. The three inputs
+      to the mission state machine — line error, confirmed targets, fused pose —
+      are the only things it decides on, and it is the only module that emits a
+      drive command. Power is drawn because the high-current motor and pump
+      loads are deliberately isolated from the logic and servo rails.
+    </figcaption>
+  </figure>
+</section>
+
+
+<!-- ══════════════════════════════ PLATE 02 ══════════════════════════ -->
+<h2 id="p2">02 · Runtime tick order</h2>
+<div class="prose">
+  <p>
+    One iteration of <code>AgriBotRuntime.tick()</code>. The ordering is the
+    part worth understanding: each step is where it is because putting it
+    elsewhere breaks something specific.
+  </p>
+</div>
+
+<section class="plate">
+  <div class="titleblock">
+    <span class="id">Plate 02</span>
+    <span class="name">Control-loop tick — ordering and why each step sits where it does</span>
+    <span>src/agribot/app/runtime.py</span>
+  </div>
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 1160 268" role="img"
+           aria-label="Seven ordered steps of one control tick: drain the microcontroller and fuse, grab a frame, extract the guidance line, run detectors then fuse and track, decide in the state machine, actuate drive and spray, then heartbeat and log. Each step carries a note explaining why its position matters.">
+        <defs>
+          <marker id="p2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--signal)"/>
+          </marker>
+        </defs>
+
+        <text class="t-band" x="16" y="20">ONE TICK · 30 Hz NOMINAL</text>
+
+        <rect class="box-sig" x="16" y="34" width="146" height="66" rx="2"/>
+        <text class="t-sm t-b t-sig" x="26" y="52">1 · DRAIN MCU</text>
+        <text class="t-sm" x="26" y="70">poll() + fuse</text>
+        <text class="t-sm t-mut" x="26" y="86">newest frame only</text>
+
+        <rect class="box" x="178" y="34" width="120" height="66" rx="2"/>
+        <text class="t-sm t-b" x="188" y="52">2 · FRAME</text>
+        <text class="t-sm" x="188" y="70">camera.read()</text>
+        <text class="t-sm t-mut" x="188" y="86">640×480 BGR</text>
+
+        <rect class="box" x="314" y="34" width="146" height="66" rx="2"/>
+        <text class="t-sm t-b" x="324" y="52">3 · LINE</text>
+        <text class="t-sm" x="324" y="70">LineFollower</text>
+        <text class="t-sm t-mut" x="324" y="86">IR only if lost</text>
+
+        <rect class="box" x="476" y="34" width="170" height="66" rx="2"/>
+        <text class="t-sm t-b" x="486" y="52">4 · PERCEIVE</text>
+        <text class="t-sm" x="486" y="70">tiers → fuse → track</text>
+        <text class="t-sm t-mut" x="486" y="86">confirm before acting</text>
+
+        <rect class="box-sig" x="662" y="34" width="150" height="66" rx="2"/>
+        <text class="t-sm t-b t-sig" x="672" y="52">5 · DECIDE</text>
+        <text class="t-sm" x="672" y="70">MissionFSM</text>
+        <text class="t-sm t-mut" x="672" y="86">safety checked first</text>
+
+        <rect class="box" x="828" y="34" width="156" height="66" rx="2"/>
+        <text class="t-sm t-b" x="838" y="52">6 · ACTUATE</text>
+        <text class="t-sm" x="838" y="70">drive · spray step</text>
+        <text class="t-sm t-mut" x="838" y="86">burst never blocks</text>
+
+        <rect class="box-warn" x="1000" y="34" width="144" height="66" rx="2"/>
+        <text class="t-sm t-b t-warn" x="1010" y="52">7 · HEARTBEAT</text>
+        <text class="t-sm" x="1010" y="70">$H + log sample</text>
+        <text class="t-sm t-mut" x="1010" y="86">last, deliberately</text>
+
+        <path class="flow-sig" d="M162,67 H178" marker-end="url(#p2a)"/>
+        <path class="flow-sig" d="M298,67 H314" marker-end="url(#p2a)"/>
+        <path class="flow-sig" d="M460,67 H476" marker-end="url(#p2a)"/>
+        <path class="flow-sig" d="M646,67 H662" marker-end="url(#p2a)"/>
+        <path class="flow-sig" d="M812,67 H828" marker-end="url(#p2a)"/>
+        <path class="flow-sig" d="M984,67 H1000" marker-end="url(#p2a)"/>
+        <path class="flow-sig" d="M1072,100 V126 H89 V100" marker-end="url(#p2a)"/>
+        <text class="t-sm t-sig" x="530" y="122">next tick</text>
+
+        <line class="rule" x1="16" y1="152" x2="1144" y2="152"/>
+        <text class="t-band" x="16" y="172">WHY THE ORDER</text>
+
+        <text class="t-sm t-mut" x="16"  y="196">1 → 5</text>
+        <text class="t-sm" x="70" y="196">Everything downstream reasons about the robot's current state, so telemetry is read and fused before any decision is made.</text>
+        <text class="t-sm t-mut" x="16"  y="216">4 → 5</text>
+        <text class="t-sm" x="70" y="216">Confirmation lives in the tracker, so the state machine only ever sees targets that have persisted — a one-frame flicker never reaches it.</text>
+        <text class="t-sm t-mut" x="16"  y="236">6 → 7</text>
+        <text class="t-sm" x="70" y="236">The heartbeat is fed last. A tick that threw partway through must not keep the MCU watchdog satisfied.</text>
+        <text class="t-sm t-mut" x="16"  y="256">1 only</text>
+        <text class="t-sm" x="70" y="256">Older queued frames are discarded, never processed. Acting on a frame from 200 ms ago is worse than acting on nothing.</text>
+      </svg>
+    </div>
+    <figcaption>
+      The loop is single-threaded on purpose. Sub-rate work — the 20 Hz
+      heartbeat, the 20 Hz telemetry sample — is gated by rate limiters inside
+      the tick rather than by separate threads, so there is exactly one place
+      where actuation can be commanded.
+    </figcaption>
+  </figure>
+</section>
+
+
+<!-- ══════════════════════════════ PLATE 03 ══════════════════════════ -->
+<h2 id="p3">03 · Navigation pipeline</h2>
+<div class="prose">
+  <p>
+    The rules require navigation by a computer-vision technique. A frame becomes
+    a normalised error, the error becomes a wheel-speed differential. The one
+    non-obvious stage is component selection, which exists because specular
+    glare passes a "bright and unsaturated" threshold as convincingly as the
+    line does.
+  </p>
+</div>
+
+<section class="plate">
+  <div class="titleblock">
+    <span class="id">Plate 03</span>
+    <span class="name">Guidance-line extraction and the steering loop</span>
+    <span>Proposal Fig. 4 · §5.2</span>
+  </div>
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 1160 372" role="img"
+           aria-label="Navigation pipeline: a frame is cropped to a region of interest, converted to HSV and thresholded, cleaned by morphological opening then closing, then the correct connected component is selected using two shape gates before image moments give a centroid. The centroid becomes a normalised error, the PID converts it to a correction, and the differential mixer converts that to wheel speeds. If no component qualifies the line is reported lost and the IR fail-safe is consulted.">
+        <defs>
+          <marker id="p3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/>
+          </marker>
+          <marker id="p3s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--signal)"/>
+          </marker>
+          <marker id="p3w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--warn)"/>
+          </marker>
+        </defs>
+
+        <text class="t-band" x="16" y="20">EXTRACT</text>
+
+        <rect class="box" x="16" y="32" width="118" height="56" rx="2"/>
+        <text class="t-sm t-b" x="26" y="52">Frame</text>
+        <text class="t-sm t-mut" x="26" y="68">BGR 640×480</text>
+
+        <rect class="box" x="150" y="32" width="126" height="56" rx="2"/>
+        <text class="t-sm t-b" x="160" y="52">ROI crop</text>
+        <text class="t-sm t-mut" x="160" y="68">rows 0.62 → 1.0</text>
+        <text class="t-sm t-mut" x="160" y="82">≈ 0.15–0.29 m</text>
+
+        <rect class="box" x="292" y="32" width="126" height="56" rx="2"/>
+        <text class="t-sm t-b" x="302" y="52">HSV threshold</text>
+        <text class="t-sm t-mut" x="302" y="68">hue+sat beat</text>
+        <text class="t-sm t-mut" x="302" y="82">intensity outdoors</text>
+
+        <rect class="box" x="434" y="32" width="146" height="56" rx="2"/>
+        <text class="t-sm t-b" x="444" y="52">Open → Close</text>
+        <text class="t-sm t-mut" x="444" y="68">speckle out, then</text>
+        <text class="t-sm t-mut" x="444" y="82">glare holes filled</text>
+
+        <rect class="box-warn" x="596" y="32" width="180" height="56" rx="2"/>
+        <text class="t-sm t-b t-warn" x="606" y="52">Component select</text>
+        <text class="t-sm t-mut" x="606" y="68">span ≥ 0.6 ROI height</text>
+        <text class="t-sm t-mut" x="606" y="82">reject broad AND filled</text>
+
+        <rect class="box" x="792" y="32" width="140" height="56" rx="2"/>
+        <text class="t-sm t-b" x="802" y="52">Image moments</text>
+        <text class="t-sm t-mut" x="802" y="68">Cx = M10 / M00</text>
+
+        <rect class="box-sig" x="948" y="32" width="196" height="56" rx="2"/>
+        <text class="t-sm t-b t-sig" x="958" y="52">Normalise → [−1, +1]</text>
+        <text class="t-sm t-mut" x="958" y="68">gains independent of</text>
+        <text class="t-sm t-mut" x="958" y="82">capture resolution</text>
+
+        <path class="flow" d="M134,60 H150" marker-end="url(#p3a)"/>
+        <path class="flow" d="M276,60 H292" marker-end="url(#p3a)"/>
+        <path class="flow" d="M418,60 H434" marker-end="url(#p3a)"/>
+        <path class="flow" d="M580,60 H596" marker-end="url(#p3a)"/>
+        <path class="flow" d="M776,60 H792" marker-end="url(#p3a)"/>
+        <path class="flow-sig" d="M932,60 H948" marker-end="url(#p3s)"/>
+
+        <!-- lost branch -->
+        <path class="flow-warn" d="M686,88 V124" marker-end="url(#p3w)"/>
+        <text class="t-sm t-warn" x="694" y="110">none qualifies</text>
+
+        <rect class="box-warn" x="596" y="124" width="180" height="50" rx="2"/>
+        <text class="t-sm t-b t-warn" x="606" y="142">found = false</text>
+        <text class="t-sm t-mut" x="606" y="158">honest "lost" beats a</text>
+        <text class="t-sm t-mut" x="606" y="170">centroid 48 px off</text>
+
+        <rect class="box" x="792" y="124" width="140" height="50" rx="2"/>
+        <text class="t-sm t-b" x="802" y="142">IrLineSensor</text>
+        <text class="t-sm t-mut" x="802" y="158">QTR-8A, tagged</text>
+        <text class="t-sm t-mut" x="802" y="170">source = "ir"</text>
+
+        <path class="flow-warn" d="M776,149 H792" marker-end="url(#p3w)"/>
+        <path class="flow-warn" d="M932,149 H1046 V88" marker-end="url(#p3w)"/>
+
+        <line class="rule" x1="16" y1="204" x2="1144" y2="204"/>
+        <text class="t-band" x="16" y="224">STEER</text>
+
+        <rect class="box-sig" x="16" y="236" width="176" height="60" rx="2"/>
+        <text class="t-sm t-b t-sig" x="26" y="256">PID</text>
+        <text class="t-sm t-mut" x="26" y="272">clamped + back-calc integral</text>
+        <text class="t-sm t-mut" x="26" y="286">filtered derivative · measured dt</text>
+
+        <rect class="box" x="216" y="236" width="200" height="60" rx="2"/>
+        <text class="t-sm t-b" x="226" y="256">DifferentialMixer</text>
+        <text class="t-sm t-mut" x="226" y="272">left = base − corr</text>
+        <text class="t-sm t-mut" x="226" y="286">right = base + corr</text>
+
+        <rect class="box" x="440" y="236" width="200" height="60" rx="2"/>
+        <text class="t-sm t-b" x="450" y="256">Saturation handling</text>
+        <text class="t-sm t-mut" x="450" y="272">scale the pair together —</text>
+        <text class="t-sm t-mut" x="450" y="286">clamping kills the turn</text>
+
+        <rect class="box-warn" x="664" y="236" width="204" height="60" rx="2"/>
+        <text class="t-sm t-b t-warn" x="674" y="256">safety_scale()</text>
+        <text class="t-sm t-mut" x="674" y="272">ultrasonic ramp, applied to</text>
+        <text class="t-sm t-mut" x="674" y="286">the output — not folded in</text>
+
+        <rect class="box" x="892" y="236" width="252" height="60" rx="2"/>
+        <text class="t-sm t-b" x="902" y="256">$M,left,right → MCU</text>
+        <text class="t-sm t-mut" x="902" y="272">verified: 0.22 mm RMS lateral</text>
+        <text class="t-sm t-mut" x="902" y="286">error from a 4 cm / 4° start</text>
+
+        <path class="flow-sig" d="M192,266 H216" marker-end="url(#p3s)"/>
+        <path class="flow" d="M416,266 H440" marker-end="url(#p3a)"/>
+        <path class="flow" d="M640,266 H664" marker-end="url(#p3a)"/>
+        <path class="flow" d="M868,266 H892" marker-end="url(#p3a)"/>
+        <path class="flow-sig" d="M1046,88 V216 H104 V236" marker-end="url(#p3s)"/>
+        <text class="t-sm t-sig" x="112" y="230">error</text>
+
+        <text class="t-sm t-mut" x="16" y="330">Sign convention, one across the whole stack: positive angular quantities are counter-clockwise. A line imaged right of centre gives a positive error;</text>
+        <text class="t-sm t-mut" x="16" y="348">the PID computes setpoint − measurement and so returns a negative correction; the mixer speeds the left wheel and the robot turns right, towards the line.</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>Why component selection is its own stage.</b> Adding a constant to all
+      three channels — which is what glare does — <em>lowers</em> saturation, so
+      a specular patch lands inside a bright-and-unsaturated gate. Two shape
+      gates separate them: a real line spans the ROI top to bottom, and a blob
+      that is both broad and solidly filled is a disc, not a band. Rejecting
+      only on the conjunction keeps a steeply tilted line, which is exactly the
+      frame a recovering robot sees.
+    </figcaption>
+  </figure>
+</section>
+
+
+<!-- ══════════════════════════════ PLATE 04 ══════════════════════════ -->
+<h2 id="p4">04 · Perception and the crop veto</h2>
+<div class="prose">
+  <p>
+    Three detector tiers run concurrently and are combined by a late-fusion
+    rule. The rule is deliberately <strong>asymmetric</strong>: weed evidence
+    accumulates, crop evidence vetoes. A false positive on a weed costs a little
+    fluid; a false positive on a crop damages the plant the robot exists to
+    protect.
+  </p>
+</div>
+
+<section class="plate">
+  <div class="titleblock">
+    <span class="id">Plate 04</span>
+    <span class="name">Dual-path perception and the asymmetric late-fusion rule</span>
+    <span>Proposal Fig. 7 · §5.6 · Novelty 1 &amp; 4</span>
+  </div>
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 1160 440" role="img"
+           aria-label="Three detector tiers feed a late-fusion rule. Overlapping detections of the same weed are merged first. A trigger test passes colour detections unconditionally and learned detections above a confidence threshold. Then a crop veto suppresses any weed that overlaps or sits near crop evidence, regardless of the weed confidence. Survivors go to a tracker that requires three consecutive frames before the mission state machine sees them.">
+        <defs>
+          <marker id="p4a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/>
+          </marker>
+          <marker id="p4c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--crop)"/>
+          </marker>
+          <marker id="p4w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--weed)"/>
+          </marker>
+        </defs>
+
+        <text class="t-band" x="16" y="20">THREE TIERS · ANY MAY BE ABSENT</text>
+
+        <rect class="box-crop" x="16" y="32" width="240" height="64" rx="2"/>
+        <text class="t-sm t-b" x="26" y="50">TIER 1 · ColorDetector</text>
+        <text class="t-sm t-mut" x="26" y="66">HSV + area, extent, aspect, solidity</text>
+        <text class="t-sm t-mut" x="26" y="80">no training · 306 fps · guaranteed scorer</text>
+        <text class="t-sm t-crop" x="26" y="92">red wraps H — two ranges, always</text>
+
+        <rect class="box" x="16" y="108" width="240" height="56" rx="2"/>
+        <text class="t-sm t-b" x="26" y="126">TIER 2 · YOLO11-nano</text>
+        <text class="t-sm t-mut" x="26" y="142">TensorRT · generalises to leaf texture</text>
+        <text class="t-sm t-mut" x="26" y="156">absent → reports unavailable, never raises</text>
+
+        <rect class="box" x="16" y="176" width="240" height="56" rx="2"/>
+        <text class="t-sm t-b" x="26" y="194">TIER 3 · YOLO-World</text>
+        <text class="t-sm t-mut" x="26" y="210">open vocabulary · "red marker", "weed"</text>
+        <text class="t-sm t-mut" x="26" y="224">zero dataset dependency</text>
+
+        <rect class="box" x="300" y="80" width="176" height="60" rx="2"/>
+        <text class="t-sm t-b" x="310" y="100">Merge overlaps</text>
+        <text class="t-sm t-mut" x="310" y="116">IoU ≥ 0.55 → one target</text>
+        <text class="t-sm t-mut" x="310" y="130">or the marker is sprayed twice</text>
+
+        <rect class="box" x="300" y="156" width="176" height="60" rx="2"/>
+        <text class="t-sm t-b" x="310" y="176">Trigger test</text>
+        <text class="t-sm t-mut" x="310" y="192">colour → always</text>
+        <text class="t-sm t-mut" x="310" y="206">learned → conf ≥ 0.55</text>
+
+        <path class="flow" d="M256,64 H278 V110 H300" marker-end="url(#p4a)"/>
+        <path class="flow" d="M256,136 H278 V110 H300" marker-end="url(#p4a)"/>
+        <path class="flow" d="M256,204 H278 V186 H300" marker-end="url(#p4a)"/>
+        <path class="flow" d="M388,140 V156" marker-end="url(#p4a)"/>
+
+        <!-- the veto -->
+        <rect class="box-weed" x="520" y="80" width="264" height="136" rx="2"/>
+        <text class="t-sm t-b t-weed" x="532" y="100">CROP VETO — hard, not weighted</text>
+        <text class="t-sm" x="532" y="122">suppress the weed if any crop</text>
+        <text class="t-sm" x="532" y="138">evidence at conf ≥ 0.35 has</text>
+        <text class="t-sm t-mut" x="532" y="158">· IoU &gt; 0.05 with it, or</text>
+        <text class="t-sm t-mut" x="532" y="174">· centroid within 60 px</text>
+        <text class="t-sm t-weed" x="532" y="198">a 0.99 weed loses to a 0.36 crop</text>
+
+        <path class="flow" d="M476,186 H500 V148 H520" marker-end="url(#p4a)"/>
+        <path class="flow-crop" d="M136,232 V268 H600 V216" marker-end="url(#p4c)"/>
+        <text class="t-sm t-crop" x="146" y="262">crop detections — protective evidence</text>
+
+        <rect class="box-weed" x="828" y="80" width="150" height="60" rx="2"/>
+        <text class="t-sm t-b" x="838" y="100">VETOED</text>
+        <text class="t-sm t-mut" x="838" y="116">logged with reason</text>
+        <text class="t-sm t-mut" x="838" y="130">no actuation</text>
+
+        <rect class="box" x="828" y="156" width="150" height="60" rx="2"/>
+        <text class="t-sm t-b" x="838" y="176">ACTIONABLE</text>
+        <text class="t-sm t-mut" x="838" y="192">weeds that survived</text>
+        <text class="t-sm t-mut" x="838" y="206">the veto</text>
+
+        <path class="flow-weed" d="M784,110 H828" marker-end="url(#p4w)"/>
+        <path class="flow" d="M784,186 H828" marker-end="url(#p4a)"/>
+
+        <rect class="box" x="1002" y="156" width="142" height="60" rx="2"/>
+        <text class="t-sm t-b" x="1012" y="176">TargetTracker</text>
+        <text class="t-sm t-mut" x="1012" y="192">confirm 3 frames</text>
+        <text class="t-sm t-mut" x="1012" y="206">sprayed → never again</text>
+
+        <path class="flow" d="M978,186 H1002" marker-end="url(#p4a)"/>
+
+        <line class="rule" x1="16" y1="300" x2="1144" y2="300"/>
+        <text class="t-band" x="16" y="320">WHY ASYMMETRY LIVES IN THE RULE, NOT IN A THRESHOLD</text>
+
+        <rect class="box" x="16" y="332" width="548" height="90" rx="2"/>
+        <text class="t-sm t-b" x="28" y="352">If crop protection were a tuned weight…</text>
+        <text class="t-sm t-mut" x="28" y="372">…anyone could restore spraying by nudging a confidence value</text>
+        <text class="t-sm t-mut" x="28" y="388">in the field at 2 a.m., and nothing in the code would object.</text>
+        <text class="t-sm t-mut" x="28" y="408">Protection would be a setting.</text>
+
+        <rect class="box-crop" x="596" y="332" width="548" height="90" rx="2"/>
+        <text class="t-sm t-b t-crop" x="608" y="352">Because it is a veto clause…</text>
+        <text class="t-sm t-mut" x="608" y="372">…crop protection is structural. The runtime additionally checks</text>
+        <text class="t-sm t-mut" x="608" y="388">rather than trusts it: a non-weed track reaching actuation is</text>
+        <text class="t-sm t-mut" x="608" y="408">refused, recorded as a fault, and exits the mission with code 2.</text>
+      </svg>
+    </div>
+    <figcaption>
+      Verified across four independent seeds and a case with a weed 4.5 cm from
+      a crop: <b>zero crops sprayed, every time</b>. The tracker's confirmation
+      requirement is the other half — acting on a single frame is how a system
+      sprays a glint of sunlight.
+    </figcaption>
+  </figure>
+</section>
+
+
+<!-- ══════════════════════════════ PLATE 05 ══════════════════════════ -->
+<h2 id="p5">05 · Kalman sensor fusion</h2>
+<div class="prose">
+  <p>
+    Two independent filters, each fusing sources that fail in complementary
+    ways. Row-end detection and spray spacing both depend on trustworthy
+    odometry, and GPS is far too coarse at the centimetre scale required in-row.
+  </p>
+</div>
+
+<section class="plate">
+  <div class="titleblock">
+    <span class="id">Plate 05</span>
+    <span class="name">Heading and distance filters — states, rates, and the innovation gate</span>
+    <span>Proposal Fig. 5 · §5.3</span>
+  </div>
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 1160 430" role="img"
+           aria-label="Two Kalman filters. The heading filter carries heading and gyro bias as states, predicts from the gyroscope at 100 hertz and corrects from the magnetometer at 20 hertz through an 8 degree innovation gate. The distance filter carries position, velocity and accelerometer bias, predicts from the accelerometer and corrects from the wheel encoder at 50 hertz through a fixed 0.05 metre per second gate. A comparison panel shows that the fixed gate threshold stays constant under coasting while an adaptive 3-sigma gate grows and eventually admits a wheel-spin sample.">
+        <defs>
+          <marker id="p5a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/>
+          </marker>
+          <marker id="p5s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--signal)"/>
+          </marker>
+          <marker id="p5w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--weed)"/>
+          </marker>
+        </defs>
+
+        <!-- heading -->
+        <text class="t-band" x="16" y="20">HEADING FILTER · 2 STATES</text>
+        <rect class="zone" x="16" y="30" width="546" height="150" rx="2"/>
+
+        <rect class="box" x="30" y="46" width="130" height="46" rx="2"/>
+        <text class="t-sm t-b" x="40" y="64">Gyroscope</text>
+        <text class="t-sm t-mut" x="40" y="80">100 Hz · biased</text>
+
+        <rect class="box" x="30" y="112" width="130" height="46" rx="2"/>
+        <text class="t-sm t-b" x="40" y="130">Magnetometer</text>
+        <text class="t-sm t-mut" x="40" y="146">20 Hz · noisy</text>
+
+        <rect class="box-sig" x="204" y="46" width="160" height="112" rx="2"/>
+        <text class="t-sm t-b t-sig" x="214" y="66">x = [θ, b_gyro]</text>
+        <text class="t-sm t-mut" x="214" y="86">predict: θ += (ω − b)·dt</text>
+        <text class="t-sm t-mut" x="214" y="104">update: H = [1, 0]</text>
+        <text class="t-sm t-mut" x="214" y="122">Joseph-form covariance</text>
+        <text class="t-sm t-mut" x="214" y="142">innovation wrapped to ±π</text>
+
+        <rect class="box-warn" x="404" y="46" width="144" height="52" rx="2"/>
+        <text class="t-sm t-b t-warn" x="414" y="64">Gate ± 8°</text>
+        <text class="t-sm t-mut" x="414" y="80">≈ 5σ of a 1.5°</text>
+        <text class="t-sm t-mut" x="414" y="92">magnetometer</text>
+
+        <rect class="box" x="404" y="112" width="144" height="46" rx="2"/>
+        <text class="t-sm t-b" x="414" y="130">Fused: 0.27° RMSE</text>
+        <text class="t-sm t-mut" x="414" y="146">vs 18.25° gyro-only</text>
+
+        <path class="flow" d="M160,69 H204" marker-end="url(#p5a)"/>
+        <path class="flow" d="M160,135 H182 V102 H204" marker-end="url(#p5a)"/>
+        <path class="flow-sig" d="M364,72 H404" marker-end="url(#p5s)"/>
+        <path class="flow-sig" d="M364,132 H404" marker-end="url(#p5s)"/>
+
+        <text class="t-sm t-mut" x="30" y="176">bias as an explicit state → the drift is subtracted, not smoothed</text>
+
+        <!-- distance -->
+        <text class="t-band" x="598" y="20">DISTANCE FILTER · 3 STATES</text>
+        <rect class="zone" x="598" y="30" width="546" height="150" rx="2"/>
+
+        <rect class="box" x="612" y="46" width="130" height="46" rx="2"/>
+        <text class="t-sm t-b" x="622" y="64">Accelerometer</text>
+        <text class="t-sm t-mut" x="622" y="80">100 Hz · drifts</text>
+
+        <rect class="box" x="612" y="112" width="130" height="46" rx="2"/>
+        <text class="t-sm t-b" x="622" y="130">Wheel encoder</text>
+        <text class="t-sm t-mut" x="622" y="146">50 Hz · over-reads</text>
+
+        <rect class="box-sig" x="786" y="46" width="160" height="112" rx="2"/>
+        <text class="t-sm t-b t-sig" x="796" y="66">x = [s, v, b_acc]</text>
+        <text class="t-sm t-mut" x="796" y="86">predict: double integrate</text>
+        <text class="t-sm t-mut" x="796" y="104">update: H = [0, 1, 0]</text>
+        <text class="t-sm t-mut" x="796" y="122">first sample initialises</text>
+        <text class="t-sm t-mut" x="796" y="142">bounded coast: 100 rejects</text>
+
+        <rect class="box-warn" x="986" y="46" width="144" height="52" rx="2"/>
+        <text class="t-sm t-b t-warn" x="996" y="64">Gate 0.05 m/s</text>
+        <text class="t-sm t-mut" x="996" y="80">FIXED — max reach-</text>
+        <text class="t-sm t-mut" x="996" y="92">able accel in 1 dt</text>
+
+        <rect class="box" x="986" y="112" width="144" height="46" rx="2"/>
+        <text class="t-sm t-b" x="996" y="130">Fused: 4 mm RMSE</text>
+        <text class="t-sm t-mut" x="996" y="146">vs 299 mm encoder</text>
+
+        <path class="flow" d="M742,69 H786" marker-end="url(#p5a)"/>
+        <path class="flow" d="M742,135 H764 V102 H786" marker-end="url(#p5a)"/>
+        <path class="flow-sig" d="M946,72 H986" marker-end="url(#p5s)"/>
+        <path class="flow-sig" d="M946,132 H986" marker-end="url(#p5s)"/>
+
+        <text class="t-sm t-mut" x="612" y="176">wheel spin, not sensor noise, is the dominant field failure</text>
+
+        <!-- gate comparison -->
+        <line class="rule" x1="16" y1="208" x2="1144" y2="208"/>
+        <text class="t-band" x="16" y="228">WHY THE GATE IS FIXED — MEASURED, NOT ASSUMED</text>
+
+        <rect class="box" x="16" y="240" width="700" height="176" rx="2"/>
+        <text class="t-sm t-b" x="32" y="262">Gate threshold while the filter coasts through a wheel spin</text>
+
+        <line class="rule" x1="120" y1="392" x2="676" y2="392"/>
+        <line class="rule" x1="120" y1="280" x2="120" y2="392"/>
+        <text class="t-sm t-mut" x="32" y="286">1.75 m/s</text>
+        <text class="t-sm t-mut" x="32" y="340">0.25 m/s</text>
+        <text class="t-sm t-mut" x="32" y="396">0</text>
+        <text class="t-sm t-mut" x="120" y="410">0 s</text>
+        <text class="t-sm t-mut" x="380" y="410">30 s</text>
+        <text class="t-sm t-mut" x="640" y="410">60 s</text>
+
+        <line class="flow-dash" x1="120" y1="340" x2="676" y2="340"/>
+        <text class="t-sm t-weed" x="560" y="334">spin magnitude 0.25 m/s</text>
+
+        <path class="flow-weed" d="M120,388 C 250,384 400,330 676,282" marker-end="url(#p5w)"/>
+        <text class="t-sm t-b t-weed" x="470" y="304">adaptive 3σ — grows without bound</text>
+
+        <line class="flow-sig" x1="120" y1="385" x2="676" y2="385"/>
+        <text class="t-sm t-b t-sig" x="140" y="378">fixed 0.05 m/s — constant for 60 s</text>
+
+        <circle cx="486" cy="340" r="4" fill="var(--weed)"/>
+        <text class="t-sm t-weed" x="410" y="360">admits the spin at 14.1 s</text>
+
+        <rect class="box-sig" x="748" y="240" width="396" height="176" rx="2"/>
+        <text class="t-sm t-b t-sig" x="762" y="262">Measured outcome</text>
+        <text class="t-sm" x="762" y="286">Fixed gate, 60 s coast</text>
+        <text class="t-sm t-mut" x="762" y="302">threshold 0.0500 m/s → 0.0500 m/s</text>
+        <text class="t-sm" x="762" y="326">Adaptive 3σ, same coast</text>
+        <text class="t-sm t-mut" x="762" y="342">0.019 m/s → 1.743 m/s</text>
+        <text class="t-sm" x="762" y="366">Spin samples admitted over 2000 s</text>
+        <text class="t-sm t-mut" x="762" y="382">fixed: 0 of 100 000 · adaptive: many</text>
+        <text class="t-sm t-crop" x="762" y="404">spin rejection 100 % · false rejects 0 %</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>The failure the fixed bound removes.</b> While the filter coasts, its
+      covariance grows; an N-sigma gate widens with it and eventually admits the
+      very sample it exists to reject, after which the state is corrupted. A
+      bound derived from physics — the acceleration the rover can actually reach
+      in one encoder interval — cannot widen. Both gates are implemented; the
+      test suite runs them side by side rather than asserting the difference.
+    </figcaption>
+  </figure>
+</section>
+
+
+<!-- ══════════════════════════════ PLATE 06 ══════════════════════════ -->
+<h2 id="p6">06 · Mission state machine</h2>
+<div class="prose">
+  <p>
+    The route is dictated by the crop rows, so the planner is not searching a
+    graph for a shortest path — it manages a deterministic sequence of
+    behaviours. Every transition is logged with its reason, which is what makes
+    a run auditable afterwards.
+  </p>
+</div>
+
+<section class="plate">
+  <div class="titleblock">
+    <span class="id">Plate 06</span>
+    <span class="name">Deterministic mission sequencer — all states and transitions</span>
+    <span>Proposal Fig. 6 · §5.4</span>
+  </div>
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 1160 586" role="img"
+           aria-label="Mission state machine. From INIT the robot enters FOLLOW LINE when the line is acquired. A confirmed weed sends it to STOP AND AIM, then SPRAY, then LOG EVENT, then back to FOLLOW LINE. An obstacle sends it to PAUSE. Losing the line leads to a grace period, then a blind creep, then either a row end which triggers TURN or MISSION COMPLETE, or a stall which leads to RECOVER. RECOVER probes forward a bounded distance. Any fault sends the machine to ESTOP from any state.">
+        <defs>
+          <marker id="p6a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/>
+          </marker>
+          <marker id="p6s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--signal)"/>
+          </marker>
+          <marker id="p6w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--warn)"/>
+          </marker>
+          <marker id="p6c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--crop)"/>
+          </marker>
+        </defs>
+
+        <!-- INIT -->
+        <rect class="box" x="16" y="112" width="118" height="46" rx="2"/>
+        <text class="t-sm t-b" x="26" y="132">INIT</text>
+        <text class="t-sm t-mut" x="26" y="148">hold still</text>
+
+        <!-- FOLLOW LINE -->
+        <rect class="box-sig" x="188" y="100" width="176" height="70" rx="2"/>
+        <text class="t-sm t-b t-sig" x="198" y="120">FOLLOW_LINE</text>
+        <text class="t-sm t-mut" x="198" y="138">vision-guided travel</text>
+        <text class="t-sm t-mut" x="198" y="154">0.18 m/s cruise</text>
+
+        <path class="flow-sig" d="M134,135 H188" marker-end="url(#p6s)"/>
+        <text class="t-sm t-sig" x="138" y="128">line</text>
+
+        <!-- spray chain -->
+        <text class="t-band" x="440" y="34">INTERVENTION CHAIN — DRIVE HALTED THROUGHOUT</text>
+        <rect class="zone" x="428" y="44" width="580" height="104" rx="2"/>
+
+        <rect class="box" x="444" y="62" width="130" height="70" rx="2"/>
+        <text class="t-sm t-b" x="454" y="82">STOP_AND_AIM</text>
+        <text class="t-sm t-mut" x="454" y="100">servos to target</text>
+        <text class="t-sm t-mut" x="454" y="116">2 s timeout</text>
+
+        <rect class="box-weed" x="604" y="62" width="122" height="70" rx="2"/>
+        <text class="t-sm t-b" x="614" y="82">SPRAY</text>
+        <text class="t-sm t-mut" x="614" y="100">metered burst</text>
+        <text class="t-sm t-mut" x="614" y="116">220 ms</text>
+
+        <rect class="box" x="756" y="62" width="130" height="70" rx="2"/>
+        <text class="t-sm t-b" x="766" y="82">LOG_EVENT</text>
+        <text class="t-sm t-mut" x="766" y="100">record ml, then</text>
+        <text class="t-sm t-mut" x="766" y="116">nudge 5 cm clear</text>
+
+        <path class="flow" d="M364,116 H404 V97 H444" marker-end="url(#p6a)"/>
+        <text class="t-sm t-mut" x="370" y="86">weed confirmed</text>
+        <path class="flow" d="M574,97 H604" marker-end="url(#p6a)"/>
+        <path class="flow" d="M726,97 H756" marker-end="url(#p6a)"/>
+        <path class="flow" d="M886,97 H930 V182 H276 V170" marker-end="url(#p6a)"/>
+        <text class="t-sm t-mut" x="560" y="196">clear of target → resume</text>
+
+        <!-- PAUSE -->
+        <rect class="box-warn" x="188" y="240" width="176" height="60" rx="2"/>
+        <text class="t-sm t-b t-warn" x="198" y="260">PAUSE</text>
+        <text class="t-sm t-mut" x="198" y="276">obstacle ≤ 0.25 m</text>
+        <text class="t-sm t-mut" x="198" y="292">resumes on its own</text>
+
+        <path class="flow-warn" d="M232,170 V240" marker-end="url(#p6w)"/>
+        <text class="t-sm t-warn" x="72" y="200">obstacle</text>
+        <path class="flow-warn" d="M320,240 V170" marker-end="url(#p6w)"/>
+        <text class="t-sm t-warn" x="328" y="212">cleared</text>
+
+        <!-- line loss ladder -->
+        <text class="t-band" x="440" y="240">LINE LOSS — RESOLVED BY DISTANCE, NOT BY TIME</text>
+        <rect class="zone" x="428" y="250" width="580" height="150" rx="2"/>
+
+        <rect class="box" x="444" y="268" width="164" height="52" rx="2"/>
+        <text class="t-sm t-b" x="454" y="286">Grace · 0.6 s</text>
+        <text class="t-sm t-mut" x="454" y="302">hold last correction</text>
+
+        <rect class="box" x="444" y="332" width="164" height="52" rx="2"/>
+        <text class="t-sm t-b" x="454" y="350">Blind creep · 0.6×</text>
+        <text class="t-sm t-mut" x="454" y="366">straight, no steering</text>
+
+        <rect class="box-crop" x="640" y="268" width="164" height="52" rx="2"/>
+        <text class="t-sm t-b t-crop" x="650" y="286">Travelled ≥ 0.35 m</text>
+        <text class="t-sm t-mut" x="650" y="302">→ the row has ended</text>
+
+        <rect class="box-warn" x="640" y="332" width="164" height="52" rx="2"/>
+        <text class="t-sm t-b t-warn" x="650" y="350">5 s, no distance</text>
+        <text class="t-sm t-mut" x="650" y="366">→ stalled, not a row end</text>
+
+        <path class="flow" d="M364,140 H396 V294 H444" marker-end="url(#p6a)"/>
+        <text class="t-sm t-mut" x="372" y="264">line lost</text>
+        <path class="flow" d="M526,320 V332" marker-end="url(#p6a)"/>
+        <path class="flow-crop" d="M608,294 H640" marker-end="url(#p6c)"/>
+        <path class="flow-warn" d="M608,358 H640" marker-end="url(#p6w)"/>
+
+        <!-- RECOVER -->
+        <rect class="box-warn" x="836" y="332" width="156" height="52" rx="2"/>
+        <text class="t-sm t-b t-warn" x="846" y="350">RECOVER</text>
+        <text class="t-sm t-mut" x="846" y="366">bounded probe 0.70 m</text>
+        <path class="flow-warn" d="M804,358 H836" marker-end="url(#p6w)"/>
+        <path class="flow-warn" d="M914,332 V310 H882 V320" marker-end="url(#p6w)"/>
+        <text class="t-sm t-warn" x="836" y="306">probe done → row end</text>
+
+        <!-- TURN / COMPLETE -->
+        <rect class="box" x="188" y="430" width="176" height="66" rx="2"/>
+        <text class="t-sm t-b" x="198" y="450">TURN</text>
+        <text class="t-sm t-mut" x="198" y="466">closes on fused heading</text>
+        <text class="t-sm t-mut" x="198" y="482">accumulated, not differenced</text>
+
+        <rect class="box-crop" x="444" y="430" width="200" height="66" rx="2"/>
+        <text class="t-sm t-b t-crop" x="454" y="450">MISSION_COMPLETE</text>
+        <text class="t-sm t-mut" x="454" y="466">all rows done, or the</text>
+        <text class="t-sm t-mut" x="454" y="482">600 s ceiling reached</text>
+
+        <path class="flow-crop" d="M722,320 V414 H276 V430" marker-end="url(#p6c)"/>
+        <text class="t-sm t-mut" x="300" y="410">rows remaining</text>
+        <path class="flow-crop" d="M722,320 V414 H544 V430" marker-end="url(#p6c)"/>
+        <text class="t-sm t-mut" x="560" y="410">last row</text>
+        <path class="flow" d="M188,463 H150 V135 H188" marker-end="url(#p6a)"/>
+        <text class="t-sm t-mut" x="60" y="300">turn complete —</text>
+        <text class="t-sm t-mut" x="60" y="316">blind counter rebased</text>
+
+        <!-- ESTOP -->
+        <rect class="box-weed" x="836" y="430" width="290" height="66" rx="2"/>
+        <text class="t-sm t-b t-weed" x="848" y="450">ESTOP — from any state, not self-clearing</text>
+        <text class="t-sm t-mut" x="848" y="468">MCU link lost · excessive tilt · operator abort</text>
+        <text class="t-sm t-mut" x="848" y="484">drive inhibited · valve shut · pump off</text>
+
+        <path class="flow-weed" d="M1050,430 V172 H1024 V152" marker-end="url(#p6w)"/>
+        <text class="t-sm t-weed" x="1030" y="200">faults are</text>
+        <text class="t-sm t-weed" x="1030" y="216">evaluated</text>
+        <text class="t-sm t-weed" x="1030" y="232">before any</text>
+        <text class="t-sm t-weed" x="1030" y="248">state logic</text>
+
+        <line class="rule" x1="16" y1="524" x2="1144" y2="524"/>
+        <text class="t-sm t-mut" x="16" y="546">A 180° row-end turn sits exactly on the ±180° wrap seam. Differencing against the start heading climbs to 180 and then falls, so the</text>
+        <text class="t-sm t-mut" x="16" y="564">completion test is only true in a window the robot can step over — and a turn that misses it spins for ever. It accumulates wrapped increments instead.</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>A crop detection produces no transition at all.</b> That behaviour is a
+      property of the fusion rule upstream, not a case handled here — vetoed
+      targets never reach the state machine. Obstacle handling pre-empts every
+      state except an active burst, because the nozzle must finish and shut
+      rather than be abandoned open.
+    </figcaption>
+  </figure>
+</section>
+
+
+<!-- ══════════════════════════════ PLATE 07 ══════════════════════════ -->
+<h2 id="p7">07 · Intervention sequence</h2>
+<div class="prose">
+  <p>
+    Pixel coordinates become servo angles, and the burst runs as a non-blocking
+    state machine so the ultrasonic safety layer and the MCU heartbeat stay
+    alive while the nozzle is open.
+  </p>
+</div>
+
+<section class="plate">
+  <div class="titleblock">
+    <span class="id">Plate 07</span>
+    <span class="name">Pixel-to-actuator mapping and the metered burst</span>
+    <span>Proposal Fig. 9 · §5.7 · Novelty 2 &amp; 3</span>
+  </div>
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 1160 414" role="img"
+           aria-label="Targeting and spray. A confirmed weed centroid maps linearly to pan and tilt angles; where a depth reading exists the tilt is re-solved from true range for elevated markers, otherwise the ground-plane solution is used and flagged. The burst then runs as a four-phase non-blocking sequence: aim and settle, prime the pump, open the valve, then recover, with the flow sensor measuring the delivered volume.">
+        <defs>
+          <marker id="p7a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/>
+          </marker>
+          <marker id="p7s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--signal)"/>
+          </marker>
+        </defs>
+
+        <text class="t-band" x="16" y="20">SOLVE</text>
+
+        <rect class="box" x="16" y="32" width="150" height="60" rx="2"/>
+        <text class="t-sm t-b" x="26" y="52">Confirmed weed</text>
+        <text class="t-sm t-mut" x="26" y="68">centroid (px, py)</text>
+        <text class="t-sm t-mut" x="26" y="82">from TargetTracker</text>
+
+        <rect class="box-sig" x="202" y="32" width="220" height="60" rx="2"/>
+        <text class="t-sm t-b t-sig" x="212" y="52">Linear map per axis</text>
+        <text class="t-sm t-mut" x="212" y="68">pan  = 90.0 + 0.0725·Δx</text>
+        <text class="t-sm t-mut" x="212" y="82">tilt = 75.0 − 0.0610·Δy</text>
+
+        <rect class="box" x="458" y="32" width="220" height="60" rx="2"/>
+        <text class="t-sm t-b" x="468" y="52">Elevated marker?</text>
+        <text class="t-sm t-mut" x="468" y="68">depth → re-solve tilt from</text>
+        <text class="t-sm t-mut" x="468" y="82">true range (rules allow 15 cm)</text>
+
+        <rect class="box-warn" x="714" y="32" width="200" height="60" rx="2"/>
+        <text class="t-sm t-b t-warn" x="724" y="52">No depth fitted</text>
+        <text class="t-sm t-mut" x="724" y="68">ground-plane solution</text>
+        <text class="t-sm t-mut" x="724" y="82">used AND flagged in the log</text>
+
+        <rect class="box" x="950" y="32" width="194" height="60" rx="2"/>
+        <text class="t-sm t-b" x="960" y="52">Clamp to envelope</text>
+        <text class="t-sm t-mut" x="960" y="68">pan 50–130° · tilt 35–120°</text>
+        <text class="t-sm t-mut" x="960" y="82">clamped flag recorded</text>
+
+        <path class="flow" d="M166,62 H202" marker-end="url(#p7a)"/>
+        <path class="flow-sig" d="M422,62 H458" marker-end="url(#p7s)"/>
+        <path class="flow" d="M678,62 H714" marker-end="url(#p7a)"/>
+        <path class="flow" d="M914,62 H950" marker-end="url(#p7a)"/>
+
+        <line class="rule" x1="16" y1="124" x2="1144" y2="124"/>
+        <text class="t-band" x="16" y="144">BURST — NON-BLOCKING, STEPPED FROM THE MAIN LOOP</text>
+
+        <rect class="box" x="16" y="158" width="220" height="72" rx="2"/>
+        <text class="t-sm t-b" x="26" y="178">AIMING · 350 ms</text>
+        <text class="t-sm t-mut" x="26" y="196">servos commanded, settle</text>
+        <text class="t-sm t-mut" x="26" y="212">flow counter latched</text>
+
+        <rect class="box" x="272" y="158" width="220" height="72" rx="2"/>
+        <text class="t-sm t-b" x="282" y="178">PRIMING · 120 ms</text>
+        <text class="t-sm t-mut" x="282" y="196">pump on, line pressurised</text>
+        <text class="t-sm t-mut" x="282" y="212">pump leads the valve</text>
+
+        <rect class="box-weed" x="528" y="158" width="220" height="72" rx="2"/>
+        <text class="t-sm t-b" x="538" y="178">BURST · 220 ms</text>
+        <text class="t-sm t-mut" x="538" y="196">solenoid open</text>
+        <text class="t-sm t-mut" x="538" y="212">metered, not continuous</text>
+
+        <rect class="box" x="784" y="158" width="220" height="72" rx="2"/>
+        <text class="t-sm t-b" x="794" y="178">RECOVER · 80 ms</text>
+        <text class="t-sm t-mut" x="794" y="196">valve shuts, THEN pump</text>
+        <text class="t-sm t-mut" x="794" y="212">never pressurise a shut line</text>
+
+        <path class="flow" d="M236,194 H272" marker-end="url(#p7a)"/>
+        <path class="flow" d="M492,194 H528" marker-end="url(#p7a)"/>
+        <path class="flow" d="M748,194 H784" marker-end="url(#p7a)"/>
+        <path class="flow-sig" d="M1004,194 H1040 V254 H520" marker-end="url(#p7s)"/>
+
+        <rect class="box-crop" x="272" y="254" width="240" height="72" rx="2"/>
+        <text class="t-sm t-b t-crop" x="282" y="274">SprayEvent</text>
+        <text class="t-sm t-mut" x="282" y="292">volume_ml from flow ticks</text>
+        <text class="t-sm t-mut" x="282" y="308">measured: true | false — never</text>
+        <text class="t-sm t-mut" x="282" y="320">an estimate passed off as data</text>
+
+        <rect class="box" x="552" y="254" width="452" height="72" rx="2"/>
+        <text class="t-sm t-b" x="562" y="274">Refusals, recorded not silent</text>
+        <text class="t-sm t-mut" x="562" y="292">min interval 1.0 s → blocked_by_interval    ·    reservoir &lt; one dose → blocked_by_reservoir</text>
+        <text class="t-sm t-mut" x="562" y="310">no flow registered → dose reported as nominal, run marked not-fully-measured</text>
+
+        <path class="flow" d="M512,290 H552" marker-end="url(#p7a)"/>
+
+        <line class="rule" x1="16" y1="350" x2="1144" y2="350"/>
+        <text class="t-sm t-mut" x="16" y="372">Because the dose is bounded and aimed, fluid consumed scales with the NUMBER OF WEEDS rather than with distance travelled —</text>
+        <text class="t-sm t-mut" x="16" y="390">measured in simulation at 1.92 ml per weed, a 3.3× reduction against a 20 ml/m² blanket rate over the same ground.</text>
+      </svg>
+    </div>
+    <figcaption>
+      A blocking <code>sleep(burst_ms)</code> would suspend the ultrasonic
+      safety layer and the MCU heartbeat for the duration of every burst.
+      Stepping the sequence from the main loop keeps both alive while the nozzle
+      is open — and the MCU's independent 1500 ms valve cap catches the case
+      where the host stops stepping it at all.
+    </figcaption>
+  </figure>
+</section>
+
+
+<!-- ══════════════════════════════ PLATE 08 ══════════════════════════ -->
+<h2 id="p8">08 · Safety layers</h2>
+<div class="prose">
+  <p>
+    Three layers, deliberately independent. Two of them work with the Jetson
+    absent, hung, or unplugged.
+  </p>
+</div>
+
+<section class="plate">
+  <div class="titleblock">
+    <span class="id">Plate 08</span>
+    <span class="name">Independent safety layers and what each one survives</span>
+    <span>firmware + mission FSM</span>
+  </div>
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 1160 296" role="img"
+           aria-label="Three independent safety layers. Layer one is the microcontroller heartbeat watchdog which stops the motors and shuts the valve if no heartbeat arrives for 500 milliseconds. Layer two is the valve maximum-open timer capping any burst at 1500 milliseconds. Layer three is the ultrasonic ramp and the mission state machine's fault checks. A table shows which failures each layer covers.">
+        <defs>
+          <marker id="p8a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--warn)"/>
+          </marker>
+        </defs>
+
+        <rect class="box-warn" x="16" y="28" width="360" height="118" rx="2"/>
+        <text class="t-sm t-b t-warn" x="30" y="50">LAYER 1 · Heartbeat watchdog</text>
+        <text class="t-sm t-mut" x="30" y="70">lives on the MCU</text>
+        <text class="t-sm" x="30" y="94">No $H frame for 500 ms →</text>
+        <text class="t-sm" x="30" y="112">motors zeroed, valve shut, pump off.</text>
+        <text class="t-sm t-mut" x="30" y="134">Survives: crashed Jetson, yanked USB, hung inference.</text>
+
+        <rect class="box-warn" x="400" y="28" width="360" height="118" rx="2"/>
+        <text class="t-sm t-b t-warn" x="414" y="50">LAYER 2 · Valve max-open timer</text>
+        <text class="t-sm t-mut" x="414" y="70">lives on the MCU</text>
+        <text class="t-sm" x="414" y="94">Solenoid cannot stay open past</text>
+        <text class="t-sm" x="414" y="112">1500 ms, whatever the host asks.</text>
+        <text class="t-sm t-mut" x="414" y="134">Survives: a lost "close" frame emptying the tank.</text>
+
+        <rect class="box-warn" x="784" y="28" width="360" height="118" rx="2"/>
+        <text class="t-sm t-b t-warn" x="798" y="50">LAYER 3 · Host safety</text>
+        <text class="t-sm t-mut" x="798" y="70">lives in the mission FSM</text>
+        <text class="t-sm" x="798" y="94">Ultrasonic ramp on the output;</text>
+        <text class="t-sm" x="798" y="112">faults checked before state logic.</text>
+        <text class="t-sm t-mut" x="798" y="134">Survives: obstacles, tilt, stale telemetry.</text>
+
+        <line class="rule" x1="16" y1="178" x2="1144" y2="178"/>
+        <text class="t-band" x="16" y="198">PLUS: CHECKSUMMED FRAMES</text>
+
+        <rect class="box" x="16" y="210" width="1128" height="62" rx="2"/>
+        <text class="t-sm" x="30" y="232">Motor wiring runs beside the USB lead. A corrupted digit in a motor command is the difference between a correction and a lurch, so every frame</text>
+        <text class="t-sm" x="30" y="252">carries an XOR checksum and failures are dropped silently. Dropping is safe precisely because commands are re-sent at 50 Hz — the next frame fixes it.</text>
+      </svg>
+    </div>
+    <figcaption>
+      The layers are ordered by what they depend on. Layer 1 and 2 need only the
+      MCU to be alive; layer 3 needs the whole stack. That ordering is why the
+      MCU owns the actuators in the first place.
+    </figcaption>
+  </figure>
+</section>
+
+
+<h2>Module map</h2>
+<div class="prose">
+  <p>Where each plate lives in the source tree.</p>
+</div>
+
+<div class="tbl-wrap">
+<table>
+  <thead>
+    <tr><th>Plate</th><th>Module</th><th>Proposal</th><th>Verified by</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>01 System architecture</td><td><code>app/runtime.py</code></td><td>Fig. 3</td><td><code>test_integration.py</code></td></tr>
+    <tr><td>02 Runtime tick</td><td><code>app/runtime.py</code></td><td>§2</td><td><code>test_integration.py</code></td></tr>
+    <tr><td>03 Navigation</td><td><code>vision/line_follow.py</code>, <code>control/pid.py</code></td><td>Fig. 4 · §5.2</td><td><code>test_vision.py</code>, <code>test_control.py</code></td></tr>
+    <tr><td>04 Perception</td><td><code>vision/fusion.py</code>, <code>vision/color_detector.py</code></td><td>Fig. 7 · §5.6</td><td><code>test_vision.py</code></td></tr>
+    <tr><td>05 Sensor fusion</td><td><code>control/kalman.py</code></td><td>Fig. 5 · §5.3</td><td><code>test_kalman.py</code></td></tr>
+    <tr><td>06 Mission FSM</td><td><code>mission/state_machine.py</code></td><td>Fig. 6 · §5.4</td><td><code>test_mission.py</code></td></tr>
+    <tr><td>07 Intervention</td><td><code>targeting/</code></td><td>Fig. 9 · §5.7</td><td><code>test_targeting.py</code></td></tr>
+    <tr><td>08 Safety</td><td><code>firmware/agribot_mcu</code>, <code>mission/</code></td><td>§2</td><td><code>test_hal.py</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <p><strong>Reproducing any number on these plates.</strong> Every quantity
+  drawn here is produced by a command, not by hand:
+  <code>bash verify.sh</code> runs all seven checks in order and exits non-zero
+  if any claim stops holding.</p>
+</div>
+
+<div class="note warn">
+  <p><strong>One deviation from the published table.</strong> Plate 05 shows a
+  fused heading RMSE of <b>0.27°</b>; the proposal's Section 5.3 table says
+  0.60°. The implementation is better than the published figure because the
+  magnetometer innovation gate sits at 8° and rejects the disturbance window
+  outright. The prose claims — "stays within a degree", "a factor of roughly
+  thirty" — remain true and are now conservative, but that one cell should read
+  0.27° and the factor "roughly seventy" if the document is to match the code.</p>
+</div>
+
+<footer>
+  AgriBot · Robofest Gujarat 6.0 · Thematic Track (f) — Robots for Sustainability<br>
+  Mechanical CAD is produced by the design sub-team and inserted into proposal Sections 3, 7, 8 and 10.
+</footer>
+
+</div>

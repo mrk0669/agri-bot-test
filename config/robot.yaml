@@ -1,0 +1,270 @@
+# ============================================================================
+#  AgriBot master configuration - Robofest Gujarat 6.0, Thematic Track (f)
+#  Autonomous Precision Robot for Sustainable Smart Agriculture
+#
+#  Every tunable in the software stack lives here. Nothing in src/ hard-codes
+#  a threshold, gain or pin. Field tuning = edit this file, restart service.
+# ============================================================================
+
+robot:
+  name: "AgriBot-1"
+  # Static bounding box mandated by the rules (cm). Enforced by preflight.
+  bounding_box_cm: { length: 30.0, width: 30.0, height: 30.0 }
+  wheel_base_m: 0.24          # track width, left-right wheel centre distance
+  # These two are the source of truth for the FIRMWARE's METRES_PER_TICK
+  # constant, not for the Python side (which receives velocities already in
+  # m/s). Change them here and in firmware/agribot_mcu/agribot_mcu.ino together.
+  wheel_radius_m: 0.0325      # 65 mm diameter wheels
+  encoder_ticks_per_rev: 1440 # quadrature, post-gearbox
+  max_speed_mps: 0.35         # mechanical ceiling
+  cruise_speed_mps: 0.18      # in-row traverse speed (slow = more frames/marker)
+
+camera:
+  source: 0                   # int = /dev/videoN, or a path to a video file
+  width: 640
+  height: 480
+  fps: 30
+  # Declarative: records the sensor type this calibration assumes. A rolling
+  # shutter would skew marker geometry while moving and corrupt both the
+  # centroid and the target coordinates (Section 5.5).
+  global_shutter: true
+  # Downward mount angle from horizontal, degrees. Line sits in bottom third.
+  mount_pitch_deg: 35.0
+  mount_height_m: 0.22        # optical centre above ground plane
+  flip_horizontal: false
+  flip_vertical: false
+  # Intrinsics; overwritten by tools/calibrate_camera.py output.
+  fx: 615.0
+  fy: 615.0
+  cx: 320.0
+  cy: 240.0
+
+navigation:
+  # --- Guidance line extraction (HSV, Section 5.2) -------------------------
+  line:
+    # Default: white/light line on dark soil. Re-tune with tools/calibrate_hsv.py
+    hsv_lower: [0, 0, 170]
+    hsv_upper: [180, 60, 255]
+    # Region of interest as fractions of frame height: react to the line
+    # immediately ahead of the wheels, not to distant curvature.
+    roi_top: 0.62
+    roi_bottom: 1.00
+    roi_left: 0.00
+    roi_right: 1.00
+    morph_kernel: 5           # opening+closing kernel, removes soil speckle
+    morph_open_iters: 1
+    morph_close_iters: 2
+    min_mask_area_px: 400     # below this the line is considered lost
+    # Line-shape gates that reject specular glare (which desaturates soil
+    # into the line's HSV gate). See LineFollower._select_component.
+    min_height_fraction: 0.60 # a real line spans the ROI top to bottom
+    blob_reject_aspect: 0.75  # reject only when BOTH this...
+    blob_reject_fill: 0.60    # ...and this are exceeded (a disc, not a band)
+  # --- PID on horizontal centroid error (normalised -1..+1) ---------------
+  pid:
+    # Tuned against the closed-loop model in tools/tune_pid.py, which drives
+    # the real extractor over rendered frames. At these gains the loop settles
+    # to ~0.2 mm RMS lateral error from a 4 cm / 4 deg initial offset.
+    kp: 0.85
+    ki: 0.02
+    kd: 0.05
+    # Deliberately below the cruise command (0.18/0.35 = 0.514) so that normal
+    # line following never reverses a wheel; only turn-in-place does that.
+    output_limit: 0.50
+    integral_limit: 0.25      # anti-windup clamp
+    derivative_filter_hz: 12.0
+  # --- Line-loss handling --------------------------------------------------
+  line_lost_grace_s: 0.6      # hold the last correction before creeping
+  # Stall watchdog, NOT a row-end test. Row end is decided on distance
+  # (mission.row_end_detect_m); this only catches a robot that has gone blind
+  # and is not actually moving. It must exceed the time needed to creep the
+  # row-end distance: 0.35 m at 0.6 x 0.18 m/s = 3.2 s, so 5.0 s has margin.
+  line_lost_stop_s: 5.0
+  blind_creep_scale: 0.6      # fraction of cruise speed while blind
+  recover_creep_scale: 0.4    # fraction of cruise speed while probing
+  recover_probe_m: 0.70       # bounded probe distance in RECOVER (2x row end)
+  # QTR-8A silent fail-safe. Consulted ONLY after the vision pipeline has
+  # already reported the line lost; the resulting observation is tagged
+  # source="ir" in the log. Vision remains the primary and rules-compliant
+  # navigation sensor. See vision/ir_failsafe.py.
+  ir_failsafe_enabled: true
+
+safety:
+  ultrasonic_stop_m: 0.25     # hard stop distance
+  ultrasonic_slow_m: 0.45     # ramp speed down
+  # If no valid telemetry frame arrives within this window the link is treated
+  # as down and the mission state machine escalates to ESTOP. This is not
+  # optional: with the link down the Jetson cannot command anything at all, so
+  # stopping is the only available action.
+  mcu_timeout_s: 0.5
+  max_tilt_deg: 25.0          # IMU roll/pitch beyond this -> stop
+
+fusion:
+  # --- 2-state heading filter: [heading_rad, gyro_bias_rad_s] --------------
+  heading:
+    # Declarative: the rates the hardware is expected to deliver. The filter
+    # itself is driven by actual sample arrival and measures its own dt, so a
+    # jittery interval is handled exactly rather than assumed.
+    predict_rate_hz: 100.0    # gyroscope
+    update_rate_hz: 20.0      # magnetometer
+    gyro_noise_std: 0.0035    # rad/s, per-sample white noise
+    gyro_bias_walk_std: 0.00015  # rad/s/sqrt(s), bias random walk
+    mag_noise_std_deg: 1.50   # measured magnetometer 1-sigma (BNO055 fused heading)
+    initial_heading_var: 0.05
+    initial_bias_var: 0.01
+    # Magnetometer disturbance rejection: reject updates whose innovation
+    # exceeds this many degrees (hard gate, see rationale in Section 5.3).
+    mag_innovation_gate_deg: 8.0
+  # --- 3-state distance filter: [pos_m, vel_mps, accel_bias_mps2] ---------
+  distance:
+    # Declarative, as above. predict_rate_hz also sets the mock MCU's
+    # telemetry rate in the software-in-the-loop simulation.
+    predict_rate_hz: 100.0    # accelerometer
+    update_rate_hz: 50.0      # wheel encoder velocity
+    accel_noise_std: 0.06     # m/s^2
+    accel_bias_walk_std: 0.002
+    encoder_noise_std: 0.006  # m/s, quantisation + slip jitter
+    initial_pos_var: 0.001
+    initial_vel_var: 0.01
+    initial_bias_var: 0.05
+    # CRITICAL: fixed physical innovation gate, NOT adaptive N-sigma.
+    # An adaptive gate widens as covariance grows during a spin and eventually
+    # admits the corrupt sample; a fixed bound derived from the maximum
+    # acceleration the rover can achieve in one encoder interval cannot.
+    # See Section 5.3 of the proposal.
+    encoder_innovation_gate_mps: 0.05
+    max_consecutive_rejects: 100  # 2 s at 50 Hz, then force re-acquire
+
+perception:
+  # --- Tier 1: deterministic colour + geometry (primary point scorer) ------
+  color:
+    enabled: true
+    weed:                      # red markers
+      hsv_ranges:
+        - { lower: [0, 120, 80],   upper: [10, 255, 255] }
+        - { lower: [170, 120, 80], upper: [180, 255, 255] }
+      min_area_px: 600
+      max_area_px: 120000
+      min_extent: 0.35         # contour area / bounding-rect area
+      min_aspect: 0.35
+      max_aspect: 3.0
+      min_solidity: 0.70
+    crop:                      # green markers
+      hsv_ranges:
+        - { lower: [35, 70, 60], upper: [85, 255, 255] }
+      min_area_px: 600
+      max_area_px: 120000
+      min_extent: 0.35
+      min_aspect: 0.35
+      max_aspect: 3.0
+      min_solidity: 0.70
+    morph_kernel: 5
+    blur_kernel: 5
+  # --- Tier 2: learned detector (YOLOv8n / YOLO11n + TensorRT) ------------
+  yolo:
+    enabled: false             # flip true once weights exist on the Jetson
+    weights: "models/weeds_yolo11n.engine"   # .engine on Jetson, .pt on laptop
+    fallback_weights: "models/weeds_yolo11n.pt"
+    imgsz: 640
+    conf: 0.45
+    iou: 0.50
+    device: 0
+    half: true
+    class_map: { 0: "crop", 1: "weed" }
+    max_det: 20
+  # --- Tier 3: open-vocabulary zero-shot (no training data required) ------
+  zeroshot:
+    enabled: false
+    model: "yolov8s-world.pt"
+    prompts:
+      weed: ["red marker", "weed", "broadleaf weed"]
+      crop: ["green plant", "crop seedling", "green marker"]
+    conf: 0.30
+  # --- Late fusion (Section 5.6, Novelty 4) --------------------------------
+  fusion:
+    # Trigger action if colour says weed OR learned detector says weed with
+    # confidence >= yolo_trigger_conf.
+    yolo_trigger_conf: 0.55
+    # ASYMMETRIC BY DESIGN: any crop evidence at/above this confidence
+    # suppresses actuation outright, whatever the weed detectors report.
+    crop_veto_conf: 0.35
+    # A weed box whose IoU with any crop box exceeds this is vetoed.
+    crop_veto_iou: 0.05
+    # Crop veto also applies within this pixel radius of the weed centroid.
+    crop_veto_radius_px: 60
+    # Consecutive frames a target must persist before it is confirmed.
+    confirm_frames: 3
+    # Frames a lost target is retained before the track is dropped.
+    track_max_age: 5
+    # Max centroid travel between frames for the same track (px).
+    track_match_dist_px: 90
+
+targeting:
+  # Pixel -> pan/tilt mapping (Section 5.7). Linear model, refit by
+  # tools/calibrate_spray.py from a grid of observed hit points.
+  pan:
+    servo_channel: 0
+    centre_deg: 90.0
+    min_deg: 50.0
+    max_deg: 130.0
+    # deg per pixel of horizontal offset from frame centre
+    deg_per_px: 0.0725
+    invert: false
+  tilt:
+    servo_channel: 1
+    centre_deg: 75.0
+    min_deg: 35.0
+    max_deg: 120.0
+    deg_per_px: 0.0610
+    invert: true
+    # Elevated markers (rules allow ~15 cm). If a depth reading is available
+    # the tilt solution uses true range instead of the ground-plane assumption.
+    use_depth_when_available: true
+    marker_height_max_m: 0.15
+  settle_time_s: 0.35          # servo settle before the burst
+
+spray:
+  enabled: true
+  mode: "spray"                # "spray" | "mark"  (mark = servo felt stamp)
+  burst_ms: 220                # solenoid open time per weed
+  pump_spinup_ms: 120          # diaphragm pump lead time for line pressure
+  pump_off_delay_ms: 80
+  min_interval_s: 1.0          # anti double-hit on the same target
+  ml_per_burst_nominal: 1.8    # nominal dose, refined by flow-sensor calib
+  flow_ticks_per_ml: 450.0     # YF-S401 class in-line sensor
+  reservoir_ml: 500.0
+  reservoir_warn_ml: 60.0
+  marker:
+    servo_channel: 2
+    up_deg: 30.0
+    down_deg: 95.0
+    dwell_ms: 400
+
+mission:
+  rows: 2                      # number of crop rows in the arena run
+  row_length_m: 6.0
+  row_end_detect_m: 0.35       # no line for this distance -> row end
+  turn_angle_deg: 180.0
+  turn_speed_mps: 0.12
+  post_spray_advance_m: 0.05   # nudge forward so the same weed is not re-seen
+  max_mission_time_s: 600.0
+
+mcu:
+  port: "/dev/ttyACM0"         # Windows dev: "COM3"
+  baud: 115200
+  timeout_s: 0.05
+  # The MCU stops the drive if heartbeats stop arriving, so this must stay
+  # comfortably above 1 / safety.mcu_timeout_s.
+  heartbeat_hz: 20
+
+telemetry:
+  log_dir: "data/logs"
+  jsonl_events: true
+  csv_timeseries: true
+  timeseries_rate_hz: 20
+  console_level: "INFO"
+  file_level: "DEBUG"
+  # RESERVED - the status OLED is in the bill of materials but no driver is
+  # implemented yet, so these two keys currently do nothing.
+  oled_enabled: false
+  oled_refresh_hz: 4

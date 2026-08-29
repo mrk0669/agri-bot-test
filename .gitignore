@@ -1,0 +1,41 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+data/logs/*.jsonl
+data/logs/*.csv
+data/runs/
+data/datasets/
+*.engine
+*.onnx
+*.pt
+!models/.gitkeep
+reports/*.png
+
+# ── Large regenerable artefacts ───────────────────────────────────────────
+# Raw dataset shards and everything derived from them. Re-create with:
+#   python tools/prepare_weed_dataset.py --delete-shards
+data/demo/agml/
+data/demo/weeds/
+data/demo/hires/
+data/demo/candidates/
+data/demo/*.jpg
+data/demo/*.png
+*.parquet
+
+# Ultralytics training output (weights are already covered by *.pt)
+runs/
+
+# Generated figures. Re-create with:
+#   python tools/demo_three_tiers.py   and   python tools/kalman_sim.py
+reports/verify_output.txt
+
+# CAD renders exported from Fusion 360 are kept (see reports/team_shots),
+# but the empty staging directory is not.
+reports/renders/
