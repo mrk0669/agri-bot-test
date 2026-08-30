@@ -91,6 +91,75 @@ def _panel(img: np.ndarray, title: str, subtitle: str, notes: Sequence[str],
     return cv2.copyMakeBorder(out, 2, 2, 2, 2, cv2.BORDER_CONSTANT, value=(196, 202, 194))
 
 
+def load_ground_truth(image: Path) -> Optional[List[Tuple[str, Tuple[float, ...]]]]:
+    """Find the YOLO label file for a demo frame, if the frame is a dataset image.
+
+    The Tier 2/3 frame is drawn from the dataset's *validation* split, so it
+    carries hand-drawn boxes. Scoring against them turns "look, boxes" into a
+    number, and makes a misclassification impossible to quietly leave out.
+    """
+    import cv2 as _cv2
+    for root in (Path("data/demo/weeds/val"), Path("data/demo/weeds/train")):
+        label = root / "labels" / f"{image.stem}.txt"
+        if not label.is_file():
+            continue
+        frame = _cv2.imread(str(image))
+        if frame is None:
+            return None
+        h, w = frame.shape[:2]
+        out = []
+        for line in label.read_text(encoding="utf-8").strip().splitlines():
+            cls, cx, cy, bw, bh = line.split()
+            cx, cy, bw, bh = (float(v) for v in (cx, cy, bw, bh))
+            out.append((("crop", "weed")[int(cls)],
+                        ((cx - bw / 2) * w, (cy - bh / 2) * h,
+                         (cx + bw / 2) * w, (cy + bh / 2) * h)))
+        return out
+    return None
+
+
+def score_against(truth, detections, min_iou: float = 0.3) -> Optional[dict]:
+    """Match detections to labels by IoU and count correct / wrong class / missed."""
+    if not truth:
+        return None
+
+    def iou(a, b):
+        ix1, iy1 = max(a[0], b[0]), max(a[1], b[1])
+        ix2, iy2 = min(a[2], b[2]), min(a[3], b[3])
+        inter = max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
+        union = ((a[2] - a[0]) * (a[3] - a[1])
+                 + (b[2] - b[0]) * (b[3] - b[1]) - inter)
+        return inter / union if union > 0 else 0.0
+
+    correct = wrong = missed = 0
+    for name, box in truth:
+        best, best_iou = None, 0.0
+        for d in detections:
+            v = iou(box, d["bbox"])
+            if v > best_iou:
+                best, best_iou = d, v
+        if best_iou < min_iou:
+            missed += 1
+        elif best["cls"] == name:
+            correct += 1
+        else:
+            wrong += 1
+    return {"labelled": len(truth), "correct": correct,
+            "wrong_class": wrong, "missed": missed}
+
+
+def _score_line(score: Optional[dict]) -> str:
+    if not score:
+        return ""
+    bits = [f"{score['correct']}/{score['labelled']} correct against the frame's "
+            f"ground-truth labels"]
+    if score["wrong_class"]:
+        bits.append(f"{score['wrong_class']} wrong class")
+    if score["missed"]:
+        bits.append(f"{score['missed']} missed")
+    return "; ".join(bits) + "."
+
+
 # ── tiers ─────────────────────────────────────────────────────────────────
 @dataclass
 class TierResult:
@@ -156,7 +225,7 @@ def run_tier1(cfg, scene: Path) -> TierResult:
     )
 
 
-def run_tier2(cfg, image: Path, weights: Path, conf: float) -> TierResult:
+def run_tier2(cfg, image: Path, weights: Path, conf: float, truth=None) -> TierResult:
     img = cv2.imread(str(image))
     merged = cfg.merged({"perception": {"yolo": {
         "enabled": True, "weights": str(weights), "fallback_weights": str(weights),
@@ -177,17 +246,20 @@ def run_tier2(cfg, image: Path, weights: Path, conf: float) -> TierResult:
 
     weeds = sum(1 for d in results if d.cls is TargetClass.WEED)
     crops = sum(1 for d in results if d.cls is TargetClass.CROP)
-    return TierResult(
-        "tier2", vis, [d.to_dict() for d in results], ms,
-        [f"Detected {weeds} weeds and {crops} crops in {ms:.1f} ms "
-         f"({1000/ms:.0f} fps) on an RTX 4060.",
-         "YOLO11-nano fine-tuned on 287 real field images (AgML weed_crop_detection,",
-         "13 species collapsed to crop/weed). Generalises to plant form, not colour.",
-         "Cost: a labelled dataset and a training run."],
-    )
+    payload = [d.to_dict() for d in results]
+    notes = [f"Detected {weeds} weeds and {crops} crops in {ms:.1f} ms "
+             f"({1000/ms:.0f} fps) on an RTX 4060."]
+    line = _score_line(score_against(truth, payload))
+    if line:
+        notes.append(line)
+    notes += ["YOLO11-nano fine-tuned on 287 real field images (AgML "
+              "weed_crop_detection,",
+              "13 species collapsed to crop/weed). Held-out frame, never trained on.",
+              "Cost: a labelled dataset and a training run."]
+    return TierResult("tier2", vis, payload, ms, notes)
 
 
-def run_tier3(cfg, image: Path, conf: float) -> TierResult:
+def run_tier3(cfg, image: Path, conf: float, truth=None) -> TierResult:
     img = cv2.imread(str(image))
     # yolov8s-world barely registers on overhead agricultural close-ups
     # (max confidence 0.14 across every prompt tried); the v2-XL checkpoint is
@@ -212,14 +284,16 @@ def run_tier3(cfg, image: Path, conf: float) -> TierResult:
         _label_box(vis, d.bbox.as_tuple(), f"{d.cls.value} {d.confidence:.2f}", colour)
 
     prompts = " / ".join(f'"{p}"' for p in det.vocabulary[:4])
-    return TierResult(
-        "tier3", vis, [d.to_dict() for d in results], ms,
-        [f"Detected {len(results)} regions in {ms:.1f} ms from text prompts alone.",
-         f"Vocabulary: {prompts}",
-         "YOLO-World v2-XL, open-vocabulary. Zero training images, zero labels -",
-         "the prompt is the whole configuration. Weaker and markedly more",
-         "prompt-sensitive than Tier 2, which is why it is the fallback."],
-    )
+    payload = [d.to_dict() for d in results]
+    notes = [f"Localised {len(results)} regions in {ms:.1f} ms from text prompts alone."]
+    line = _score_line(score_against(truth, payload))
+    if line:
+        notes.append(line)
+    notes += [f"Vocabulary: {prompts}",
+              "YOLO-World v2-XL. Zero training images, zero labels - the prompt is",
+              "the whole configuration. It finds the plants but is markedly weaker",
+              "at telling crop from weed, which is why it is the fallback."]
+    return TierResult("tier3", vis, payload, ms, notes)
 
 
 def main(argv=None) -> int:
@@ -239,17 +313,23 @@ def main(argv=None) -> int:
     cfg = load_config(use_local=False, use_env=False)
     args.out.mkdir(parents=True, exist_ok=True)
 
+    truth = load_ground_truth(args.field)
+    if truth:
+        crops = sum(1 for n, _ in truth if n == "crop")
+        print(f"Ground truth for {args.field.name}: {crops} crop, "
+              f"{len(truth) - crops} weed")
+
     tiers: List[TierResult] = []
     print("Tier 1 — colour + geometry")
     tiers.append(run_tier1(cfg, args.scene))
     print(f"   {tiers[-1].ms:.1f} ms, {len(tiers[-1].detections)} regions")
 
     print("Tier 2 — fine-tuned YOLO11-nano")
-    tiers.append(run_tier2(cfg, args.field, args.weights, args.conf2))
+    tiers.append(run_tier2(cfg, args.field, args.weights, args.conf2, truth))
     print(f"   {tiers[-1].ms:.1f} ms, {len(tiers[-1].detections)} detections")
 
     print("Tier 3 — YOLO-World zero-shot")
-    tiers.append(run_tier3(cfg, args.field, args.conf3))
+    tiers.append(run_tier3(cfg, args.field, args.conf3, truth))
     print(f"   {tiers[-1].ms:.1f} ms, {len(tiers[-1].detections)} detections")
 
     meta = {
