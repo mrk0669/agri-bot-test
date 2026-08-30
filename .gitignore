@@ -27,6 +27,12 @@ data/demo/hires/
 data/demo/candidates/
 data/demo/*.jpg
 data/demo/*.png
+# The extracted frame pool is regenerable, so only the two frames the figures
+# actually use are tracked - enough to re-run demo_three_tiers.py without
+# re-downloading a gigabyte of dataset.
+data/demo/pool/*
+!data/demo/pool/0014-of-00016_0048.jpg
+!data/demo/pool/0014-of-00016_0050.jpg
 *.parquet
 
 # Ultralytics training output (weights are already covered by *.pt)
