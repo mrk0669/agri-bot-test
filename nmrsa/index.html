@@ -1,0 +1,1646 @@
+<title>NMRSA Roof Analyser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#e6ecec;
+  --surface:#ffffff;
+  --surface-2:#f3f6f6;
+  --ink:#0f1719;
+  --ink-2:#41565a;
+  --ink-3:#6b8286;
+  --rule:#c3d1d1;
+  --rule-strong:#9db0b1;
+  --accent:#0c5a63;
+  --accent-soft:#d7e8e9;
+  --safe:#166b3c;
+  --caution:#8a6300;
+  --danger:#992018;
+  --safe-bg:#dcece2;
+  --caution-bg:#f3e8cd;
+  --danger-bg:#f4dedb;
+  --shadow:0 1px 2px rgba(15,23,25,.08);
+  --fig-rock:#1b2426;
+  --fig-void:#ffffff;
+  --fig-label:#cfdad9;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0a1012;
+    --surface:#111a1c;
+    --surface-2:#162124;
+    --ink:#dfe9e8;
+    --ink-2:#9db0b1;
+    --ink-3:#7b9093;
+    --rule:#243336;
+    --rule-strong:#3a4d50;
+    --accent:#5cc4cd;
+    --accent-soft:#12333a;
+    --safe:#6fc48d;
+    --caution:#e0b155;
+    --danger:#f08b7f;
+    --safe-bg:#13291d;
+    --caution-bg:#2c2413;
+    --danger-bg:#2e1815;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+    --fig-rock:#05090a;
+    --fig-void:#1e2c30;
+    --fig-label:#a9bcbd;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0a1012;--surface:#111a1c;--surface-2:#162124;--ink:#dfe9e8;--ink-2:#9db0b1;
+  --ink-3:#7b9093;--rule:#243336;--rule-strong:#3a4d50;--accent:#5cc4cd;--accent-soft:#12333a;
+  --safe:#6fc48d;--caution:#e0b155;--danger:#f08b7f;--safe-bg:#13291d;--caution-bg:#2c2413;
+  --danger-bg:#2e1815;--shadow:0 1px 2px rgba(0,0,0,.4);--fig-rock:#05090a;--fig-void:#1e2c30;--fig-label:#a9bcbd;color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground);color:var(--ink);
+  font:400 14px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.cond{font-family:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;font-weight:600;letter-spacing:.01em}
+.num{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+
+/* ---------- title block ---------- */
+.sheet{max-width:1440px;margin:0 auto;padding:14px}
+.titleblock{
+  display:grid;grid-template-columns:minmax(210px,auto) 1fr auto;
+  border:1.5px solid var(--rule-strong);background:var(--surface);
+}
+.tb-mark{padding:11px 16px;border-right:1.5px solid var(--rule-strong);display:flex;flex-direction:column;gap:1px;justify-content:center}
+.tb-mark .wordmark{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:30px;line-height:.95;letter-spacing:.06em;color:var(--ink)}
+.tb-mark .sub{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.tb-fields{display:grid;grid-template-columns:repeat(4,1fr)}
+.tb-field{border-right:1px solid var(--rule);padding:7px 11px;min-width:0}
+.tb-field:last-child{border-right:0}
+.tb-field label{display:block;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.tb-field input{
+  width:100%;border:0;background:transparent;color:var(--ink);padding:0;
+  font:500 13.5px/1.35 "IBM Plex Sans",sans-serif;
+}
+.tb-field input::placeholder{color:var(--ink-3);font-weight:400}
+.tb-tools{display:flex;align-items:stretch;border-left:1.5px solid var(--rule-strong)}
+.tb-tools button{
+  border:0;border-right:1px solid var(--rule);background:transparent;color:var(--ink-2);
+  padding:0 13px;cursor:pointer;font:600 11px/1 "Barlow Condensed",sans-serif;
+  letter-spacing:.09em;text-transform:uppercase;
+}
+.tb-tools button:last-child{border-right:0}
+.tb-tools button:hover{background:var(--surface-2);color:var(--accent)}
+.tb-tools button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:0;border:1.5px solid var(--rule-strong);border-top:0;background:var(--surface-2);overflow-x:auto}
+.tabs button{
+  border:0;border-right:1px solid var(--rule);background:transparent;color:var(--ink-2);
+  padding:9px 20px;cursor:pointer;white-space:nowrap;
+  font:600 13px/1 "Barlow Condensed",sans-serif;letter-spacing:.1em;text-transform:uppercase;
+}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:inset 0 -2.5px 0 var(--accent)}
+.tabs button:hover{color:var(--accent)}
+
+/* ---------- workspace ---------- */
+.workspace{display:grid;grid-template-columns:326px 1fr;gap:14px;margin-top:14px;align-items:start}
+@media (max-width:1000px){.workspace{grid-template-columns:1fr}}
+
+.panel{background:var(--surface);border:1px solid var(--rule);box-shadow:var(--shadow)}
+.panel > h2{
+  margin:0;padding:8px 13px;border-bottom:1px solid var(--rule);background:var(--surface-2);
+  font-size:14px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);
+  display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+}
+.panel > h2 .note{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:0;text-transform:none;color:var(--ink-3)}
+.panel-body{padding:12px 13px;display:flex;flex-direction:column;gap:11px}
+
+.rail{display:flex;flex-direction:column;gap:14px;position:sticky;top:14px}
+@media (max-width:1000px){.rail{position:static}}
+
+/* ---------- fields ---------- */
+.field{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center}
+.field > label{font-size:12.5px;color:var(--ink-2);line-height:1.3}
+.field > label small{display:block;color:var(--ink-3);font-size:10.5px}
+input[type="number"],input[type="text"],select{
+  width:100%;padding:5px 7px;border:1px solid var(--rule);background:var(--surface);
+  color:var(--ink);border-radius:2px;
+  font:500 13px/1.3 "IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+}
+select{font-family:"IBM Plex Sans",sans-serif}
+input[type="number"]:focus,select:focus,input[type="text"]:focus{border-color:var(--accent)}
+.field-wide{grid-template-columns:1fr}
+.field-wide select,.field-wide input{width:100%}
+
+.slider{display:grid;grid-template-columns:1fr 54px;gap:9px;align-items:center}
+.slider .lab{font-size:12.5px;color:var(--ink-2)}
+.slider .lab b{font-weight:600;color:var(--ink)}
+.slider .lab small{display:block;font-size:10.5px;color:var(--ink-3);line-height:1.35}
+.slider input[type="range"]{grid-column:1/2;width:100%;accent-color:var(--accent);margin:0}
+.slider .val{
+  grid-row:1/3;grid-column:2/3;align-self:center;text-align:right;
+  font:600 17px/1 "IBM Plex Mono",monospace;color:var(--ink);font-variant-numeric:tabular-nums;
+}
+.slider .val em{display:block;font:400 10px/1.4 "IBM Plex Sans",sans-serif;font-style:normal;color:var(--ink-3)}
+
+.rowset{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.subhead{font:600 11px/1 "Barlow Condensed",sans-serif;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);padding-top:3px;border-top:1px dashed var(--rule);padding-top:9px}
+.btn{
+  border:1px solid var(--accent);background:var(--accent);color:var(--surface);border-radius:2px;
+  padding:7px 12px;cursor:pointer;font:600 12px/1 "Barlow Condensed",sans-serif;
+  letter-spacing:.1em;text-transform:uppercase;
+}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:hover{filter:brightness(1.08)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---------- RMR gauge ---------- */
+.gauge{display:flex;flex-direction:column;gap:5px}
+.gauge-bar{position:relative;height:26px;display:flex;border:1px solid var(--rule-strong)}
+.gauge-bar span{flex:1;display:flex;align-items:center;justify-content:center;font:600 10px/1 "Barlow Condensed",sans-serif;letter-spacing:.08em;color:var(--ink-3);border-right:1px solid var(--rule)}
+.gauge-bar span:last-child{border-right:0}
+.gauge-needle{position:absolute;top:-5px;bottom:-5px;width:2.5px;background:var(--ink);transition:left .18s ease}
+.gauge-needle::after{
+  content:attr(data-v);position:absolute;top:-17px;left:50%;transform:translateX(-50%);
+  font:600 11px/1 "IBM Plex Mono",monospace;color:var(--ink);background:var(--surface);padding:0 3px;white-space:nowrap;
+}
+.gauge-legend{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3)}
+
+/* ---------- verdict ---------- */
+.verdict{display:grid;grid-template-columns:8px 1fr auto;gap:0;border:1px solid var(--rule);background:var(--surface);align-items:stretch}
+.verdict .stripe{background:var(--ink-3)}
+.verdict.ok .stripe{background:var(--safe)} .verdict.warn .stripe{background:var(--caution)} .verdict.bad .stripe{background:var(--danger)}
+.verdict .txt{padding:11px 14px}
+.verdict h2{margin:0 0 2px;font-size:21px;letter-spacing:.01em}
+.verdict.ok h2{color:var(--safe)} .verdict.warn h2{color:var(--caution)} .verdict.bad h2{color:var(--danger)}
+.verdict p{margin:0;font-size:12.5px;color:var(--ink-2);max-width:62ch}
+.verdict .tally{display:flex;gap:14px;padding:11px 15px;border-left:1px solid var(--rule);align-items:center}
+.tally div{text-align:center}
+.tally b{display:block;font:600 20px/1 "IBM Plex Mono",monospace}
+.tally small{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+
+/* ---------- opening cards ---------- */
+.openings{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.openings{grid-template-columns:1fr}}
+.readouts{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.readout{background:var(--surface);padding:8px 10px}
+.readout .k{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.readout .v{font:600 19px/1.2 "IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;margin-top:2px}
+.readout .v u{text-decoration:none;font:400 11px/1 "IBM Plex Sans",sans-serif;color:var(--ink-3);margin-left:2px}
+
+.meter{display:flex;flex-direction:column;gap:4px}
+.meter .track{position:relative;height:14px;background:var(--surface-2);border:1px solid var(--rule);overflow:hidden}
+.meter .fill{height:100%;background:var(--safe);transition:width .18s ease}
+.meter.warn .fill{background:var(--caution)} .meter.bad .fill{background:var(--danger)}
+.meter .mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.meter .cap{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3)}
+.meter .cap b{color:var(--ink);font-family:"IBM Plex Mono",monospace}
+
+.advice{font-size:12.5px;color:var(--ink-2);border-left:2px solid var(--accent);padding:2px 0 2px 10px}
+.advice b{color:var(--ink)}
+
+/* ---------- checks ---------- */
+.checks{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--rule)}
+.check{display:grid;grid-template-columns:64px 1fr;gap:11px;padding:8px 13px;border-bottom:1px solid var(--rule);align-items:start}
+.chip{font:600 9.5px/1 "Barlow Condensed",sans-serif;letter-spacing:.11em;text-transform:uppercase;padding:4px 6px;text-align:center;border-radius:2px}
+.chip.pass{background:var(--safe-bg);color:var(--safe)}
+.chip.warn{background:var(--caution-bg);color:var(--caution)}
+.chip.fail{background:var(--danger-bg);color:var(--danger)}
+.check .t{font-size:13px;font-weight:500}
+.check .t em{font-style:normal;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-3);margin-left:6px}
+.check .d{font-size:12.5px;color:var(--ink-2);margin-top:1px}
+
+/* ---------- drawings & charts ---------- */
+.figures{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:900px){.figures{grid-template-columns:1fr}}
+figure{margin:0}
+figcaption{font-size:11.5px;color:var(--ink-3);padding:7px 13px 11px}
+svg{display:block;width:100%;height:auto}
+.chartgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:900px){.chartgrid{grid-template-columns:1fr}}
+
+/* ---------- tables ---------- */
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:6px 10px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+th{font:600 10px/1.2 "Barlow Condensed",sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+td.n{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;text-align:right}
+tr.here td{background:var(--accent-soft)}
+.iconbtn{border:1px solid var(--rule);background:transparent;color:var(--ink-3);cursor:pointer;border-radius:2px;padding:2px 7px;font-size:12px}
+.iconbtn:hover{color:var(--danger);border-color:var(--danger)}
+
+/* ---------- prose ---------- */
+.prose{max-width:70ch;display:flex;flex-direction:column;gap:11px;font-size:13.5px;line-height:1.62}
+.prose h3{margin:9px 0 0;font-size:17px;letter-spacing:.02em}
+.prose p{margin:0;color:var(--ink-2)}
+.prose ul{margin:0;padding-left:18px;color:var(--ink-2);display:flex;flex-direction:column;gap:5px}
+.formula{
+  background:var(--surface-2);border:1px solid var(--rule);border-left:2.5px solid var(--accent);
+  padding:9px 12px;font:500 13px/1.6 "IBM Plex Mono",monospace;overflow-x:auto;
+}
+.formula em{font-style:normal;color:var(--ink-3);font-size:11.5px}
+.caveat{background:var(--caution-bg);border:1px solid var(--caution);padding:9px 12px;font-size:12.5px;color:var(--ink)}
+.caveat b{color:var(--caution)}
+
+.hidden{display:none!important}
+.stamp{font:500 10.5px/1.5 "IBM Plex Mono",monospace;color:var(--ink-3);padding:10px 2px 24px;border-top:1px solid var(--rule);margin-top:14px}
+.sign{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:22px}
+.sign div{border-top:1px solid var(--rule-strong);padding-top:5px;font-size:11px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media print{
+  body{background:#fff}
+  .tabs,.tb-tools,.rail,.noprint{display:none!important}
+  .workspace{grid-template-columns:1fr}
+  .panel{break-inside:avoid;box-shadow:none}
+  .print-only{display:block!important}
+  .sheet{max-width:none;padding:0}
+}
+.print-only{display:none}
+</style>
+
+<div class="sheet">
+
+<header class="titleblock">
+  <div class="tb-mark">
+    <div class="wordmark">NMRSA</div>
+    <div class="sub">Mine roof support analyser</div>
+  </div>
+  <div class="tb-fields">
+    <div class="tb-field"><label for="f-mine">Mine / colliery</label><input id="f-mine" type="text" placeholder="e.g. Kakri UG"></div>
+    <div class="tb-field"><label for="f-seam">Seam &amp; district</label><input id="f-seam" type="text" placeholder="e.g. Seam IV, 3 Dip"></div>
+    <div class="tb-field"><label for="f-panel">Panel / working</label><input id="f-panel" type="text" placeholder="e.g. B&amp;P development"></div>
+    <div class="tb-field"><label for="f-by">Prepared by</label><input id="f-by" type="text" placeholder="Ground control engineer"></div>
+  </div>
+  <div class="tb-tools">
+    <button id="t-units" type="button" aria-pressed="false" title="Switch between metric and imperial display">Metric</button>
+    <button id="t-save" type="button" title="Keep this design in the browser">Save</button>
+    <button id="t-print" type="button" title="Print or save the full report as PDF">Report</button>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Analyser sections">
+  <button role="tab" aria-selected="true" data-pane="design">Support design</button>
+  <button role="tab" aria-selected="false" data-pane="charts">Design charts</button>
+  <button role="tab" aria-selected="false" data-pane="pillar">Pillars</button>
+  <button role="tab" aria-selected="false" data-pane="register">Roof register</button>
+  <button role="tab" aria-selected="false" data-pane="method">Method &amp; codes</button>
+</nav>
+
+<div class="workspace">
+
+  <!-- ============ INPUT RAIL ============ -->
+  <div class="rail noprint">
+
+    <section class="panel">
+      <h2>Roof rating <span class="note">CMRI-ISM</span></h2>
+      <div class="panel-body">
+        <div class="gauge">
+          <div class="gauge-bar" id="rmr-bar">
+            <span>V</span><span>IV</span><span>III</span><span>II</span><span>I</span>
+            <div class="gauge-needle" id="rmr-needle" data-v="47"></div>
+          </div>
+          <div class="gauge-legend"><span>0 · very poor</span><span id="rmr-class">Fair roof</span><span>100 · very good</span></div>
+        </div>
+
+        <div class="slider">
+          <div class="lab"><b>Layer thickness</b><small id="h-layer">Bedding of the immediate roof</small></div>
+          <input type="range" id="p-layer" min="0" max="30" step="1" value="14">
+          <div class="val"><span id="v-layer">14</span><em>of 30</em></div>
+        </div>
+        <div class="slider">
+          <div class="lab"><b>Structural features</b><small id="h-struct">Slips, joints, faults, washouts</small></div>
+          <input type="range" id="p-struct" min="0" max="25" step="1" value="12">
+          <div class="val"><span id="v-struct">12</span><em>of 25</em></div>
+        </div>
+        <div class="slider">
+          <div class="lab"><b>Weatherability</b><small id="h-weather">Slake durability of the roof rock</small></div>
+          <input type="range" id="p-weather" min="0" max="20" step="1" value="10">
+          <div class="val"><span id="v-weather">10</span><em>of 20</em></div>
+        </div>
+        <div class="slider">
+          <div class="lab"><b>Roof rock strength</b><small id="h-strength">UCS of the immediate roof</small></div>
+          <input type="range" id="p-strength" min="0" max="15" step="1" value="6">
+          <div class="val"><span id="v-strength">6</span><em>of 15</em></div>
+        </div>
+        <div class="slider">
+          <div class="lab"><b>Ground water</b><small id="h-water">Seepage into the gallery</small></div>
+          <input type="range" id="p-water" min="0" max="10" step="1" value="5">
+          <div class="val"><span id="v-water">5</span><em>of 10</em></div>
+        </div>
+
+        <div class="subhead">Situation adjustments <span class="num" id="adj-product">×1.00</span></div>
+        <div class="rowset">
+          <div class="field field-wide"><label for="a-depth">Depth of cover</label><input type="number" id="a-depth" min="0.5" max="1" step="0.01" value="1"></div>
+          <div class="field field-wide"><label for="a-lat">Lateral stress</label><input type="number" id="a-lat" min="0.5" max="1" step="0.01" value="1"></div>
+          <div class="field field-wide"><label for="a-ind">Induced stress</label><input type="number" id="a-ind" min="0.5" max="1" step="0.01" value="1"></div>
+          <div class="field field-wide"><label for="a-exc">Method of work</label><input type="number" id="a-exc" min="0.5" max="1" step="0.01" value="1"></div>
+        </div>
+        <p style="margin:0;font-size:11.5px;color:var(--ink-3)">Adjustment factors come from the site geotechnical report, not from this tool. Leave them at 1.00 to design on the basic rating.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Geometry</h2>
+      <div class="panel-body">
+        <div class="field"><label for="g-width">Gallery width <small id="u-gw">metres</small></label><input type="number" id="g-width" data-u="len" step="0.1" value="4.2"></div>
+        <div class="field"><label for="g-height">Gallery height <small id="u-gh">metres</small></label><input type="number" id="g-height" data-u="len" step="0.1" value="3"></div>
+        <div class="field"><label for="g-cross">Crossing width <small id="u-gc">the other gallery at the junction</small></label><input type="number" id="g-cross" data-u="len" step="0.1" value="4.2"></div>
+        <div class="field"><label for="g-depth">Depth of cover <small id="u-gd">metres</small></label><input type="number" id="g-depth" data-u="len" step="5" value="150"></div>
+        <div class="field"><label for="g-dens">Roof rock density <small id="u-dn">t/m³</small></label><input type="number" id="g-dens" data-u="dens" step="0.05" value="2.3"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Support pattern</h2>
+      <div class="panel-body">
+        <div class="field field-wide"><label for="s-type">Bolt type</label><select id="s-type"></select></div>
+        <div class="field"><label for="s-cap">Anchorage capacity <small id="u-cap">tonnes per bolt</small></label><input type="number" id="s-cap" data-u="force" step="0.5" value="10"></div>
+        <div class="field"><label for="s-len">Bolt length <small id="u-bl">metres</small></label><input type="number" id="s-len" data-u="len" step="0.1" value="2.4"></div>
+        <div class="subhead">Gallery rows</div>
+        <div class="rowset">
+          <div class="field field-wide"><label for="s-n">Bolts per row</label><input type="number" id="s-n" min="2" max="8" step="1" value="4"></div>
+          <div class="field field-wide"><label for="s-row">Row spacing <span id="u-rs">m</span></label><input type="number" id="s-row" data-u="len" step="0.1" value="1.2"></div>
+        </div>
+        <div class="subhead">Junction rows</div>
+        <div class="rowset">
+          <div class="field field-wide"><label for="s-jn">Bolts per row</label><input type="number" id="s-jn" min="2" max="10" step="1" value="4"></div>
+          <div class="field field-wide"><label for="s-jrow">Row spacing <span id="u-jrs">m</span></label><input type="number" id="s-jrow" data-u="len" step="0.1" value="0.9"></div>
+        </div>
+        <div class="subhead">Factors of safety</div>
+        <div class="rowset">
+          <div class="field field-wide"><label for="s-sfg">Gallery</label><input type="number" id="s-sfg" min="1" max="4" step="0.1" value="1.5"></div>
+          <div class="field field-wide"><label for="s-sfj">Junction</label><input type="number" id="s-sfj" min="1" max="4" step="0.1" value="2"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="b-suggest" type="button">Suggest a pattern</button>
+          <button class="btn ghost" id="b-reset" type="button">Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Pillars</h2>
+      <div class="panel-body">
+        <div class="field"><label for="p-centre">Centre distance <small id="u-pc">between pillar centres</small></label><input type="number" id="p-centre" data-u="len" step="0.5" value="25.5"></div>
+        <div class="field"><label for="p-hw">Working height <small id="u-ph">extraction height</small></label><input type="number" id="p-hw" data-u="len" step="0.1" value="3"></div>
+        <div class="field"><label for="p-ucs">Coal UCS <small id="u-pu">25 mm cube</small></label><input type="number" id="p-ucs" data-u="press" step="1" value="25"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ============ RESULT DECK ============ -->
+  <div class="deck" style="display:flex;flex-direction:column;gap:14px;min-width:0">
+
+    <div class="verdict" id="verdict">
+      <div class="stripe"></div>
+      <div class="txt"><h2 id="verdict-title">Adequate</h2><p id="verdict-text"></p></div>
+      <div class="tally">
+        <div><b id="tally-pass">0</b><small>pass</small></div>
+        <div><b id="tally-warn">0</b><small>caution</small></div>
+        <div><b id="tally-fail">0</b><small>fail</small></div>
+      </div>
+    </div>
+
+    <!-- ---- DESIGN ---- -->
+    <div class="pane" id="pane-design" style="display:flex;flex-direction:column;gap:14px">
+
+      <div class="openings">
+        <section class="panel">
+          <h2>Gallery <span class="note" id="gal-span">span 4.20 m</span></h2>
+          <div class="panel-body">
+            <div class="readouts">
+              <div class="readout"><div class="k">Rock load</div><div class="v" id="gal-load">—</div></div>
+              <div class="readout"><div class="k">Rock load height</div><div class="v" id="gal-height">—</div></div>
+              <div class="readout"><div class="k">Resistance needed</div><div class="v" id="gal-need">—</div></div>
+              <div class="readout"><div class="k">Resistance offered</div><div class="v" id="gal-have">—</div></div>
+            </div>
+            <div class="meter" id="gal-meter">
+              <div class="track"><div class="fill" id="gal-fill" style="width:60%"></div><div class="mark" id="gal-mark" style="left:50%"></div></div>
+              <div class="cap"><span>Support safety factor <b id="gal-ssf">—</b></span><span>required <b id="gal-req">1.50</b></span></div>
+            </div>
+            <div class="advice" id="gal-advice"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Junction <span class="note" id="jun-span">span 5.94 m</span></h2>
+          <div class="panel-body">
+            <div class="readouts">
+              <div class="readout"><div class="k">Rock load</div><div class="v" id="jun-load">—</div></div>
+              <div class="readout"><div class="k">Rock load height</div><div class="v" id="jun-height">—</div></div>
+              <div class="readout"><div class="k">Resistance needed</div><div class="v" id="jun-need">—</div></div>
+              <div class="readout"><div class="k">Resistance offered</div><div class="v" id="jun-have">—</div></div>
+            </div>
+            <div class="meter" id="jun-meter">
+              <div class="track"><div class="fill" id="jun-fill" style="width:60%"></div><div class="mark" id="jun-mark" style="left:50%"></div></div>
+              <div class="cap"><span>Support safety factor <b id="jun-ssf">—</b></span><span>required <b id="jun-req">2.00</b></span></div>
+            </div>
+            <div class="advice" id="jun-advice"></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="figures">
+        <section class="panel">
+          <h2>Gallery section <span class="note">drawn to scale</span></h2>
+          <figure><div id="fig-section"></div>
+            <figcaption>Looking along the gallery. The hatched band is the roof the rating says will
+              detach if it is not held; every bolt must anchor above it.</figcaption></figure>
+        </section>
+        <section class="panel">
+          <h2>Junction plan <span class="note">bolt layout</span></h2>
+          <figure><div id="fig-plan"></div>
+            <figcaption>Four-way junction. The diagonal is the span the roof actually has to bridge —
+              which is why the junction pattern is closer than the gallery pattern.</figcaption></figure>
+        </section>
+      </div>
+
+      <section class="panel">
+        <h2>Compliance and design checks <span class="note" id="check-count"></span></h2>
+        <div class="checks" id="checks"></div>
+      </section>
+    </div>
+
+    <!-- ---- CHARTS ---- -->
+    <div class="pane hidden" id="pane-charts" style="display:flex;flex-direction:column;gap:14px">
+      <div class="chartgrid">
+        <section class="panel"><h2>Rock load against rating</h2>
+          <figure><div id="ch-load"></div>
+            <figcaption>Rock load for this gallery width and roof density across the whole rating
+              range. Above RMR 85 the empirical curve predicts no mobilised load.</figcaption></figure></section>
+        <section class="panel"><h2>Largest permissible row spacing</h2>
+          <figure><div id="ch-space"></div>
+            <figcaption>Row spacing that still delivers the required factor of safety, for the bolt
+              you have chosen. Read down from your rating.</figcaption></figure></section>
+      </div>
+      <section class="panel"><h2>Rating against depth of cover <span class="note">stability regimes</span></h2>
+        <figure><div id="ch-regime"></div>
+          <figcaption>Where this working sits among the three support regimes. The boundaries follow
+            the rock load the CMRI-ISM expression predicts for this gallery width, so they move when
+            the geometry changes.</figcaption></figure></section>
+    </div>
+
+    <!-- ---- PILLARS ---- -->
+    <div class="pane hidden" id="pane-pillar" style="display:flex;flex-direction:column;gap:14px">
+      <section class="panel">
+        <h2>Pillar stability <span class="note">Sheorey / CIMFR</span></h2>
+        <div class="panel-body">
+          <div class="readouts" style="grid-template-columns:repeat(4,1fr)">
+            <div class="readout"><div class="k">Pillar width</div><div class="v" id="pl-width">—</div></div>
+            <div class="readout"><div class="k">Strength</div><div class="v" id="pl-strength">—</div></div>
+            <div class="readout"><div class="k">Induced stress</div><div class="v" id="pl-stress">—</div></div>
+            <div class="readout"><div class="k">Factor of safety</div><div class="v" id="pl-fos">—</div></div>
+          </div>
+          <div class="meter" id="pl-meter">
+            <div class="track"><div class="fill" id="pl-fill" style="width:50%"></div><div class="mark" style="left:50%"></div></div>
+            <div class="cap"><span>Extraction ratio <b id="pl-extr">—</b></span><span>1.5 for development · 2.0 to stand long term</span></div>
+          </div>
+          <div class="advice" id="pl-advice"></div>
+        </div>
+      </section>
+      <div class="chartgrid">
+        <section class="panel"><h2>Factor of safety against pillar centres</h2>
+          <figure><div id="ch-pillar"></div>
+            <figcaption>At this depth and working height. The marker is the centre distance you have
+              entered.</figcaption></figure></section>
+        <section class="panel">
+          <h2>Minimum pillar centres <span class="note">CMR 2017, Reg. 111</span></h2>
+          <div class="tablewrap"><table id="tb-cmr"><thead><tr>
+            <th>Depth of cover</th><th>3.0 m</th><th>3.6 m</th><th>4.2 m</th><th>4.8 m</th>
+          </tr></thead><tbody></tbody></table></div>
+          <figcaption>Reproduced for reference. Confirm against the Gazette text and any DGMS
+            circular in force before a statutory plan is drawn on it.</figcaption>
+        </section>
+      </div>
+    </div>
+
+    <!-- ---- REGISTER ---- -->
+    <div class="pane hidden" id="pane-register" style="display:flex;flex-direction:column;gap:14px">
+      <section class="panel">
+        <h2>Roof observation register <span class="note">kept in this browser</span></h2>
+        <div class="panel-body">
+          <p style="margin:0;font-size:12.5px;color:var(--ink-2)">Log every fall, cavity and
+            tell-tale reading against the conditions that produced it. Over a few months this becomes
+            the only roof fall database that actually describes <em>your</em> seam. It never leaves
+            this device — export it to move it or to hand it to the ground control cell.</p>
+          <div class="rowset" style="grid-template-columns:repeat(3,1fr)">
+            <div class="field field-wide"><label for="r-date">Date</label><input type="text" id="r-date" placeholder="2026-09-04"></div>
+            <div class="field field-wide"><label for="r-loc">Location</label><input type="text" id="r-loc" placeholder="4 Lvl / 3 Dip junction"></div>
+            <div class="field field-wide"><label for="r-kind">Event</label>
+              <select id="r-kind">
+                <option>Roof fall</option><option>Cavity / pot hole</option><option>Tell-tale movement</option>
+                <option>Rib spalling</option><option>Water seepage</option><option>Routine observation</option>
+              </select></div>
+          </div>
+          <div class="rowset" style="grid-template-columns:repeat(4,1fr)">
+            <div class="field field-wide"><label for="r-rmr">RMR</label><input type="number" id="r-rmr" step="1" value="47"></div>
+            <div class="field field-wide"><label for="r-span">Span, m</label><input type="number" id="r-span" step="0.1" value="4.2"></div>
+            <div class="field field-wide"><label for="r-fall">Fall height, m</label><input type="number" id="r-fall" step="0.1" value="0"></div>
+            <div class="field field-wide"><label for="r-sup">Support in place</label><input type="text" id="r-sup" placeholder="4 × 1.8 m @ 1.2 m"></div>
+          </div>
+          <div class="field field-wide"><label for="r-note">Cause / remark</label><input type="text" id="r-note" placeholder="Slip intersecting the junction, roof drummy on sounding"></div>
+          <div class="btn-row"><button class="btn" id="b-add" type="button">Add to register</button>
+            <button class="btn ghost" id="b-export" type="button">Export</button>
+            <button class="btn ghost" id="b-import" type="button">Import</button></div>
+        </div>
+        <div class="tablewrap"><table id="tb-reg"><thead><tr>
+          <th>Date</th><th>Location</th><th>Event</th><th>RMR</th><th>Span</th><th>Fall</th>
+          <th>Support</th><th>Remark</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </section>
+      <section class="panel">
+        <h2>Falls against rating <span class="note">your own records</span></h2>
+        <figure><div id="ch-reg"></div>
+          <figcaption>Each logged event plotted on rating and span. As the register fills, the cloud
+            of falls shows where your own roof actually starts failing — which is the number worth
+            designing to.</figcaption></figure>
+      </section>
+    </div>
+
+    <!-- ---- METHOD ---- -->
+    <div class="pane hidden" id="pane-method">
+      <section class="panel"><h2>Method, formulae and the codes behind them</h2>
+        <div class="panel-body"><div class="prose" id="method-prose"></div></div>
+      </section>
+    </div>
+
+    <div class="print-only" style="margin-top:10px">
+      <div class="sign"><div>Ground control engineer</div><div>Manager</div><div>Date of approval</div></div>
+    </div>
+
+    <p class="stamp">NMRSA v1.0 · CMRI-ISM rock mass rating · a design aid, not a Systematic Support
+      Rule. Support installed underground is governed by the SSR approved under the Coal Mines
+      Regulations 2017 and by the DGMS circulars in force. Verify every reproduced statutory figure
+      against its source before use.</p>
+  </div>
+</div>
+</div>
+
+<style>
+@media print{
+  .pane{display:flex!important;flex-direction:column;gap:14px;break-before:page}
+  #pane-design{break-before:auto}
+  .verdict{break-inside:avoid}
+}
+</style>
+
+<script>
+"use strict";
+/* =====================================================================
+   NMRSA — calculation engine.  Mirrors nmrsa_engine.py exactly; that file
+   carries the unit tests that keep the two in step.
+   ===================================================================== */
+
+var MAX_SPACING = 1.5;       // m, between bolts across a row and between rows
+var MIN_BOLT_LEN = 1.2;      // m
+var ANCHORAGE = 0.3;         // m of grout required above the rock-load band
+var MAX_W = 4.8, MAX_H = 3.0;// CMR 2017 Reg. 111
+
+var BOLT_TYPES = [
+  {id:"resin22", label:"22 mm full-column resin-grouted, Fe 500", cap:10},
+  {id:"resin20", label:"20 mm full-column resin-grouted, Fe 500", cap:8},
+  {id:"cement22", label:"22 mm cement-capsule grouted", cap:8},
+  {id:"mech", label:"Point-anchored mechanical (expansion shell)", cap:5},
+  {id:"cable", label:"Flexible cable bolt, 15.2 mm strand", cap:18}
+];
+
+var RMR_CLASSES = [[0,20,"V","Very poor"],[20,40,"IV","Poor"],[40,60,"III","Fair"],
+                   [60,80,"II","Good"],[80,101,"I","Very good"]];
+
+var PILLAR_CENTRES = [
+  {upper:60,   label:"up to 60 m",  row:[12.0,15.0,18.0,19.5]},
+  {upper:90,   label:"60 – 90 m",   row:[13.5,16.5,19.5,21.0]},
+  {upper:150,  label:"90 – 150 m",  row:[16.5,19.0,22.5,25.5]},
+  {upper:240,  label:"150 – 240 m", row:[22.0,25.5,30.5,34.5]},
+  {upper:360,  label:"240 – 360 m", row:[28.5,34.0,39.5,45.0]},
+  {upper:null, label:"over 360 m",  row:[39.0,45.0,51.5,58.0]}
+];
+var WIDTH_COLS = [3.0,3.6,4.2,4.8];
+
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+function rockLoadCoefficient(rmr){
+  return Math.max(1.7 - 0.037*rmr + 0.0002*rmr*rmr, 0);
+}
+function rockLoad(span, density, rmr){ return span * density * rockLoadCoefficient(rmr); }
+function rockLoadHeight(span, rmr){ return span * rockLoadCoefficient(rmr); }
+function junctionSpan(a,b){ return Math.sqrt(a*a + b*b); }
+function boltsAcross(span, maxSpacing){
+  if (span <= 0) return 0;
+  return Math.max(2, Math.ceil(span / (maxSpacing || MAX_SPACING)));
+}
+function rmrClass(rmr){
+  for (var i=0;i<RMR_CLASSES.length;i++){
+    if (rmr >= RMR_CLASSES[i][0] && rmr < RMR_CLASSES[i][1])
+      return {numeral:RMR_CLASSES[i][2], label:RMR_CLASSES[i][3]};
+  }
+  return {numeral:"I", label:"Very good"};
+}
+
+function designOpening(name, span, density, rmr, cap, nRow, rowSpacing, boltLength, sf){
+  var load = rockLoad(span, density, rmr);
+  var height = rockLoadHeight(span, rmr);
+  var required = load * sf;
+  var nRequired = cap > 0 ? required / cap : 0;
+  var maxRow = (nRequired > 0 && span > 0) ? nRow / (nRequired * span) : MAX_SPACING;
+  maxRow = Math.min(maxRow, MAX_SPACING);
+  var provided = (span > 0 && rowSpacing > 0) ? (nRow / (span * rowSpacing)) * cap : 0;
+  var ssf = load > 0 ? provided / load : Infinity;
+  var lengthNeeded = Math.max(height + ANCHORAGE, MIN_BOLT_LEN);
+  return {
+    name:name, span:span, boltsPerRow:nRow, rowSpacing:rowSpacing,
+    load:load, height:height, sfRequired:sf, required:required,
+    density:nRequired, maxRowSpacing:maxRow, provided:provided, ssf:ssf,
+    lengthNeeded:lengthNeeded,
+    adequate: ssf >= sf && boltLength >= lengthNeeded
+  };
+}
+
+function pillarStrength(ucs, h, w, H){
+  if (h <= 0 || w <= 0) return 0;
+  return 0.27*ucs*Math.pow(h,-0.36) + (H/250)*(w/h - 1);
+}
+function pillarStress(H, w, B){
+  if (w <= 0) return Infinity;
+  var r = (w + B)/w;
+  return 0.025*H*r*r;
+}
+function statutoryCentre(depth, width){
+  var col = -1;
+  for (var i=0;i<WIDTH_COLS.length;i++){ if (width <= WIDTH_COLS[i] + 1e-9){ col = i; break; } }
+  if (col < 0) return null;
+  for (var j=0;j<PILLAR_CENTRES.length;j++){
+    var band = PILLAR_CENTRES[j];
+    if (band.upper === null || depth <= band.upper) return band.row[col];
+  }
+  return null;
+}
+
+/* =====================================================================
+   State
+   ===================================================================== */
+var DEFAULTS = {
+  mine:"", seam:"", panel:"", by:"",
+  layer:14, struct:12, weather:10, strength:6, water:5,
+  aDepth:1, aLat:1, aInd:1, aExc:1,
+  width:4.2, height:3.0, cross:4.2, depth:150, dens:2.3,
+  boltType:"resin22", cap:10, boltLen:2.4,
+  nRow:4, rowSpacing:1.2, jRow:4, jSpacing:0.9,
+  sfG:1.5, sfJ:2.0,
+  centre:25.5, workHeight:3.0, ucs:25
+};
+var S = Object.assign({}, DEFAULTS);
+var UNITS = "metric";
+var REGISTER = [];
+
+var U = {
+  len:  {metric:{f:1, s:"m"},      imperial:{f:3.280839895, s:"ft"}},
+  load: {metric:{f:1, s:"t/m²"},   imperial:{f:0.204816,    s:"kip/ft²"}},
+  force:{metric:{f:1, s:"t"},      imperial:{f:2.204622622, s:"kip"}},
+  dens: {metric:{f:1, s:"t/m³"},   imperial:{f:62.42796,    s:"lb/ft³"}},
+  press:{metric:{f:1, s:"MPa"},    imperial:{f:145.0377,    s:"psi"}}
+};
+function uf(kind){ return U[kind][UNITS].f; }
+function us(kind){ return U[kind][UNITS].s; }
+function out(v, kind, dp){
+  if (!isFinite(v)) return "—";
+  var n = v * uf(kind);
+  return n.toFixed(dp === undefined ? 2 : dp) + '<u>' + us(kind) + '</u>';
+}
+function plain(v, kind, dp){
+  return (v * uf(kind)).toFixed(dp === undefined ? 2 : dp) + " " + us(kind);
+}
+
+/* =====================================================================
+   Analysis
+   ===================================================================== */
+function analyse(){
+  var basic = clamp(S.layer + S.struct + S.weather + S.strength + S.water, 0, 100);
+  var factor = S.aDepth * S.aLat * S.aInd * S.aExc;
+  var rmr = clamp(basic * factor, 0, 100);
+  var cls = rmrClass(rmr);
+
+  var gallery = designOpening("Gallery", S.width, S.dens, rmr, S.cap,
+                              S.nRow, S.rowSpacing, S.boltLen, S.sfG);
+  var jSpan = junctionSpan(S.width, S.cross);
+  var junction = designOpening("Junction", jSpan, S.dens, rmr, S.cap,
+                               S.jRow, S.jSpacing, S.boltLen, S.sfJ);
+
+  var pw = S.centre - S.width;
+  var strength = pillarStrength(S.ucs, S.workHeight, pw, S.depth);
+  var stress = pillarStress(S.depth, pw, S.width);
+  var fos = stress > 0 ? strength / stress : 0;
+  var centre = pw + S.width;
+  var pillar = {
+    width:pw, centre:S.centre, strength:strength, stress:stress, fos:fos,
+    extraction: centre > 0 ? 1 - (pw*pw)/(centre*centre) : 0,
+    verdict: fos >= 2 ? "Stable for long-term standing"
+           : fos >= 1.5 ? "Adequate for development"
+           : fos >= 1.0 ? "Marginal — redesign or narrow the galleries"
+           : "Unsafe — the pillar is overloaded"
+  };
+
+  return {basic:basic, factor:factor, rmr:rmr, cls:cls,
+          gallery:gallery, junction:junction, pillar:pillar,
+          checks: buildChecks(gallery, junction, pillar)};
+}
+
+function chk(code, title, status, detail){
+  return {code:code, title:title, status:status, detail:detail};
+}
+
+function buildChecks(gallery, junction, pillar){
+  var c = [];
+  c.push(S.width <= MAX_W + 1e-9
+    ? chk("CMR 111","Gallery width","pass", plain(S.width,"len") + " is within the 4.8 m limit.")
+    : chk("CMR 111","Gallery width","fail", plain(S.width,"len") +
+        " exceeds 4.8 m — the Regional Inspector's written permission is required."));
+
+  c.push(S.height <= MAX_H + 1e-9
+    ? chk("CMR 111","Gallery height","pass", plain(S.height,"len") + " is within the 3.0 m limit.")
+    : chk("CMR 111","Gallery height","fail", plain(S.height,"len") +
+        " exceeds 3.0 m — the Regional Inspector's written permission is required."));
+
+  var across = S.nRow > 0 ? S.width / S.nRow : Infinity;
+  var acrossJ = junction.boltsPerRow > 0 ? junction.span / junction.boltsPerRow : Infinity;
+  var worst = Math.max(across, acrossJ);
+  c.push(worst <= MAX_SPACING + 1e-9
+    ? chk("SSR","Bolt spacing across the row","pass",
+        plain(across,"len") + " in the gallery, " + plain(acrossJ,"len") + " at the junction.")
+    : chk("SSR","Bolt spacing across the row","fail",
+        plain(worst,"len") + " exceeds the 1.5 m normally accepted — add a bolt to the row."));
+
+  var rows = Math.max(S.rowSpacing, S.jSpacing);
+  c.push(rows <= MAX_SPACING + 1e-9
+    ? chk("SSR","Row spacing","pass",
+        plain(S.rowSpacing,"len") + " in the gallery, " + plain(S.jSpacing,"len") + " at the junction.")
+    : chk("SSR","Row spacing","fail", plain(rows,"len") + " between rows exceeds 1.5 m."));
+
+  [gallery, junction].forEach(function(o){
+    c.push(o.ssf >= o.sfRequired
+      ? chk("Design","Support safety factor — " + o.name.toLowerCase(),"pass",
+          "SSF " + o.ssf.toFixed(2) + " against a required " + o.sfRequired.toFixed(2) + ".")
+      : chk("Design","Support safety factor — " + o.name.toLowerCase(),"fail",
+          "SSF " + o.ssf.toFixed(2) + " is below the required " + o.sfRequired.toFixed(2) +
+          " — close the rows to " + plain(o.maxRowSpacing,"len") + " or use a stronger bolt."));
+  });
+
+  if (junction.maxRowSpacing < 0.75){
+    c.push(chk("Practice","Junction support","warn",
+      "Rows at " + plain(junction.maxRowSpacing,"len") + " are impractical to install — carry the " +
+      "junction on cable bolts, W-straps or breaker props in addition to the roof bolts."));
+  }
+
+  var longest = Math.max(gallery.lengthNeeded, junction.lengthNeeded);
+  c.push(S.boltLen >= longest
+    ? chk("Design","Bolt length","pass", plain(S.boltLen,"len") + " anchors " +
+        plain(S.boltLen - junction.height,"len") + " above the junction rock-load band.")
+    : chk("Design","Bolt length","fail", plain(S.boltLen,"len") + " is shorter than the " +
+        plain(longest,"len") + " needed to anchor above the rock-load band."));
+
+  if (S.boltLen > S.height){
+    c.push(chk("Practice","Drilling clearance","warn",
+      "A " + plain(S.boltLen,"len") + " bolt in a " + plain(S.height,"len") +
+      " gallery needs a jointed drill rod or a flexible bolt."));
+  }
+
+  var statutory = statutoryCentre(S.depth, S.width);
+  if (statutory === null){
+    c.push(chk("CMR 111","Minimum pillar centres","warn",
+      "The gallery is wider than the tabulated columns — the Regional Inspector's permission " +
+      "governs the pillar size."));
+  } else if (S.centre >= statutory - 1e-9){
+    c.push(chk("CMR 111","Minimum pillar centres","pass",
+      plain(S.centre,"len",1) + " meets the tabulated " + plain(statutory,"len",1) + " for " +
+      plain(S.depth,"len",0) + " of cover."));
+  } else {
+    c.push(chk("CMR 111","Minimum pillar centres","fail",
+      plain(S.centre,"len",1) + " is below the tabulated " + plain(statutory,"len",1) + " for " +
+      plain(S.depth,"len",0) + " of cover."));
+  }
+
+  c.push(pillar.fos >= 1.5
+    ? chk("Design","Pillar factor of safety","pass",
+        "FoS " + pillar.fos.toFixed(2) + " — " + pillar.verdict.toLowerCase() + ".")
+    : chk("Design","Pillar factor of safety","fail",
+        "FoS " + pillar.fos.toFixed(2) + " — " + pillar.verdict.toLowerCase() + "."));
+
+  return c;
+}
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   Drawing helpers
+   ===================================================================== */
+function esc(s){ return String(s).replace(/[&<>"]/g, function(m){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]; }); }
+
+function niceTicks(min, max, count){
+  var out = [], step = (max - min) / count;
+  for (var i=0;i<=count;i++) out.push(min + step*i);
+  return out;
+}
+
+function lineChart(cfg){
+  var W = cfg.w || 600, H = cfg.h || 280;
+  var m = {l:56, r:18, t:16, b:42};
+  var x0 = cfg.x[0], x1 = cfg.x[1], y0 = cfg.y[0], y1 = cfg.y[1];
+  var px = function(v){ return m.l + (v - x0)/(x1 - x0) * (W - m.l - m.r); };
+  var py = function(v){ return H - m.b - (clamp(v,y0,y1) - y0)/(y1 - y0) * (H - m.t - m.b); };
+  var s = '';
+
+  (cfg.bands || []).forEach(function(b){
+    s += '<rect x="'+px(b.x0).toFixed(1)+'" y="'+m.t+'" width="'+(px(b.x1)-px(b.x0)).toFixed(1)+
+         '" height="'+(H-m.t-m.b)+'" fill="'+b.fill+'" opacity="'+(b.opacity||0.16)+'"></rect>';
+    if (b.label) s += '<text x="'+((px(b.x0)+px(b.x1))/2).toFixed(1)+'" y="'+(H-m.b-7)+
+      '" text-anchor="middle" font-size="10" font-family="Barlow Condensed, sans-serif" ' +
+      'letter-spacing="1.1" fill="'+(b.text||'var(--ink-3)')+'">'+esc(b.label)+'</text>';
+  });
+
+  (cfg.hbands || []).forEach(function(b){
+    var ya = py(b.y1), yb = py(b.y0);
+    s += '<rect x="'+m.l+'" y="'+ya.toFixed(1)+'" width="'+(W-m.l-m.r)+'" height="'+(yb-ya).toFixed(1)+
+         '" fill="'+b.fill+'" opacity="'+(b.opacity||0.14)+'"></rect>';
+    if (b.label) s += '<text x="'+(W-m.r-8)+'" y="'+(ya+13).toFixed(1)+'" text-anchor="end" '+
+      'font-size="10" font-family="Barlow Condensed, sans-serif" letter-spacing="1.1" '+
+      'fill="var(--ink-3)">'+esc(b.label)+'</text>';
+  });
+
+  niceTicks(y0, y1, 4).forEach(function(v){
+    s += '<line x1="'+m.l+'" y1="'+py(v).toFixed(1)+'" x2="'+(W-m.r)+'" y2="'+py(v).toFixed(1)+
+         '" stroke="var(--rule)" stroke-width="1"></line>' +
+         '<text x="'+(m.l-7)+'" y="'+(py(v)+3.5).toFixed(1)+'" text-anchor="end" font-size="10.5" ' +
+         'font-family="IBM Plex Mono, monospace" fill="var(--ink-3)">'+
+         (Math.abs(v)>=100 ? v.toFixed(0) : v.toFixed(cfg.yDp === undefined ? 1 : cfg.yDp))+'</text>';
+  });
+  niceTicks(x0, x1, 5).forEach(function(v){
+    s += '<line x1="'+px(v).toFixed(1)+'" y1="'+(H-m.b)+'" x2="'+px(v).toFixed(1)+'" y2="'+(H-m.b+4)+
+         '" stroke="var(--rule-strong)" stroke-width="1"></line>' +
+         '<text x="'+px(v).toFixed(1)+'" y="'+(H-m.b+17)+'" text-anchor="middle" font-size="10.5" ' +
+         'font-family="IBM Plex Mono, monospace" fill="var(--ink-3)">'+
+         (Math.abs(v)>=100 ? v.toFixed(0) : v.toFixed(cfg.xDp === undefined ? 0 : cfg.xDp))+'</text>';
+  });
+
+  (cfg.series || []).forEach(function(ser){
+    var d = ser.pts.map(function(p,i){ return (i?'L':'M')+px(p[0]).toFixed(1)+' '+py(p[1]).toFixed(1); }).join(' ');
+    if (ser.fill)
+      s += '<path d="'+d+' L '+px(ser.pts[ser.pts.length-1][0]).toFixed(1)+' '+py(y0)+
+           ' L '+px(ser.pts[0][0]).toFixed(1)+' '+py(y0)+' Z" fill="'+ser.fill+'" opacity="0.14"></path>';
+    s += '<path d="'+d+'" fill="none" stroke="'+ser.color+'" stroke-width="'+(ser.width||2)+'"'+
+         (ser.dash ? ' stroke-dasharray="'+ser.dash+'"' : '')+' stroke-linejoin="round"></path>';
+  });
+
+  var legend = (cfg.series || []).filter(function(x){ return x.label; });
+  if (legend.length){
+    var lw = 0;
+    legend.forEach(function(x){ lw = Math.max(lw, 34 + x.label.length*5.9); });
+    var lx = m.l + 8;
+    var ly = cfg.legendPos === "bottom" ? H - m.b - 12 - (legend.length-1)*15 : m.t + 13;
+    s += '<rect x="'+(lx-5)+'" y="'+(ly-11)+'" width="'+lw.toFixed(0)+'" height="'+
+         (legend.length*15+4)+'" fill="var(--surface)" opacity="0.84"></rect>';
+    legend.forEach(function(x, i){
+      var yy = ly + i*15;
+      s += '<line x1="'+lx+'" y1="'+yy+'" x2="'+(lx+20)+'" y2="'+yy+'" stroke="'+x.color+
+           '" stroke-width="2.2"'+(x.dash ? ' stroke-dasharray="'+x.dash+'"' : '')+'></line>';
+      s += '<text x="'+(lx+26)+'" y="'+(yy+3.6)+'" font-size="10.5" '+
+           'font-family="IBM Plex Sans, sans-serif" fill="var(--ink-2)">'+esc(x.label)+'</text>';
+    });
+  }
+
+  (cfg.scatter || []).forEach(function(p){
+    s += '<circle cx="'+px(p.x).toFixed(1)+'" cy="'+py(p.y).toFixed(1)+'" r="'+(p.r||4)+
+         '" fill="'+(p.fill||'var(--danger)')+'" fill-opacity="0.75" stroke="var(--surface)" stroke-width="1"></circle>';
+  });
+
+  if (cfg.marker){
+    var mx = px(cfg.marker.x), my = py(cfg.marker.y);
+    s += '<line x1="'+mx.toFixed(1)+'" y1="'+m.t+'" x2="'+mx.toFixed(1)+'" y2="'+(H-m.b)+
+         '" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3 3"></line>';
+    s += '<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="5.5" fill="var(--accent)" '+
+         'stroke="var(--surface)" stroke-width="1.6"></circle>';
+    if (cfg.marker.label){
+      var anchor = mx > W*0.62 ? 'end' : 'start';
+      var dx = anchor === 'end' ? -10 : 10;
+      var ly2 = my < m.t + 34 ? my + 18 : my - 12;
+      s += '<text x="'+(mx+dx).toFixed(1)+'" y="'+ly2.toFixed(1)+'" text-anchor="'+anchor+
+           '" font-size="11" font-weight="600" font-family="IBM Plex Sans, sans-serif" '+
+           'fill="var(--accent)">'+esc(cfg.marker.label)+'</text>';
+    }
+  }
+
+  s += '<line x1="'+m.l+'" y1="'+(H-m.b)+'" x2="'+(W-m.r)+'" y2="'+(H-m.b)+'" stroke="var(--rule-strong)" stroke-width="1.2"></line>';
+  s += '<line x1="'+m.l+'" y1="'+m.t+'" x2="'+m.l+'" y2="'+(H-m.b)+'" stroke="var(--rule-strong)" stroke-width="1.2"></line>';
+  s += '<text x="'+(W/2)+'" y="'+(H-6)+'" text-anchor="middle" font-size="10" letter-spacing="1.2" '+
+       'font-family="Barlow Condensed, sans-serif" fill="var(--ink-3)">'+esc(cfg.xTitle)+'</text>';
+  s += '<text transform="translate(13,'+((H-m.b+m.t)/2)+') rotate(-90)" text-anchor="middle" '+
+       'font-size="10" letter-spacing="1.2" font-family="Barlow Condensed, sans-serif" '+
+       'fill="var(--ink-3)">'+esc(cfg.yTitle)+'</text>';
+
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(cfg.xTitle+' against '+cfg.yTitle)+'">'+s+'</svg>';
+}
+
+/* ---------- gallery cross-section ---------- */
+function drawSection(r){
+  var W = 600, H = 330, pad = {l:52, r:34, t:26, b:46};
+  var g = r.gallery;
+  var mWide = S.width + 2.6;
+  var mHigh = S.height + Math.max(S.boltLen, g.height) + 0.7;
+  var sc = Math.min((W-pad.l-pad.r)/mWide, (H-pad.t-pad.b)/mHigh);
+  var cx = W/2, floorY = H - pad.b;
+  var gw = S.width*sc, gh = S.height*sc;
+  var left = cx - gw/2, roofY = floorY - gh;
+  var rlh = g.height*sc, bl = S.boltLen*sc;
+  var s = '<defs><pattern id="hatch" width="7" height="7" patternTransform="rotate(38)" ' +
+          'patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="var(--caution-bg)"></rect>' +
+          '<line x1="0" y1="0" x2="0" y2="7" stroke="var(--caution)" stroke-width="1.1"></line></pattern></defs>';
+
+  s += '<rect x="'+(pad.l-26)+'" y="'+(pad.t-14)+'" width="'+(W-pad.l-pad.r+52)+'" height="'+
+       (floorY-pad.t+14)+'" fill="var(--surface-2)"></rect>';
+  for (var i=1;i<=4;i++){
+    var y = pad.t - 14 + i*((roofY-rlh-pad.t+14)/5);
+    s += '<line x1="'+(pad.l-26)+'" y1="'+y.toFixed(1)+'" x2="'+(W-pad.r+26)+'" y2="'+y.toFixed(1)+
+         '" stroke="var(--rule)" stroke-width="1"></line>';
+  }
+  s += '<text x="'+(pad.l-20)+'" y="'+(pad.t-1)+'" font-size="10" letter-spacing="1.1" '+
+       'font-family="Barlow Condensed, sans-serif" fill="var(--ink-3)">COMPETENT ROOF STRATA</text>';
+
+  if (rlh > 0.5)
+    s += '<rect x="'+left.toFixed(1)+'" y="'+(roofY-rlh).toFixed(1)+'" width="'+gw.toFixed(1)+
+         '" height="'+rlh.toFixed(1)+'" fill="url(#hatch)" stroke="var(--caution)" '+
+         'stroke-width="1" stroke-dasharray="4 3"></rect>';
+
+  s += '<rect x="'+(left-2.2*sc).toFixed(1)+'" y="'+roofY.toFixed(1)+'" width="'+(2.2*sc).toFixed(1)+
+       '" height="'+gh.toFixed(1)+'" fill="var(--fig-rock)" opacity="0.85"></rect>';
+  s += '<rect x="'+(left+gw).toFixed(1)+'" y="'+roofY.toFixed(1)+'" width="'+(2.2*sc).toFixed(1)+
+       '" height="'+gh.toFixed(1)+'" fill="var(--fig-rock)" opacity="0.85"></rect>';
+  s += '<rect x="'+left.toFixed(1)+'" y="'+roofY.toFixed(1)+'" width="'+gw.toFixed(1)+'" height="'+
+       gh.toFixed(1)+'" fill="var(--fig-void)" stroke="var(--ink)" stroke-width="1.6"></rect>';
+  s += '<rect x="'+(left-2.2*sc).toFixed(1)+'" y="'+floorY.toFixed(1)+'" width="'+(gw+4.4*sc).toFixed(1)+
+       '" height="9" fill="var(--rule-strong)"></rect>';
+
+  var n = Math.max(2, S.nRow);
+  var step = gw/n;
+  for (var b=0;b<n;b++){
+    var bx = left + step*(b+0.5);
+    s += '<line x1="'+bx.toFixed(1)+'" y1="'+roofY.toFixed(1)+'" x2="'+bx.toFixed(1)+'" y2="'+
+         (roofY-bl).toFixed(1)+'" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"></line>';
+    s += '<rect x="'+(bx-9).toFixed(1)+'" y="'+(roofY-1).toFixed(1)+
+         '" width="18" height="5" fill="var(--accent)"></rect>';
+  }
+
+  function dimH(y, xa, xb, label){
+    return '<line x1="'+xa.toFixed(1)+'" y1="'+y+'" x2="'+xb.toFixed(1)+'" y2="'+y+
+      '" stroke="var(--ink-2)" stroke-width="1"></line>' +
+      '<line x1="'+xa.toFixed(1)+'" y1="'+(y-4)+'" x2="'+xa.toFixed(1)+'" y2="'+(y+4)+'" stroke="var(--ink-2)"></line>' +
+      '<line x1="'+xb.toFixed(1)+'" y1="'+(y-4)+'" x2="'+xb.toFixed(1)+'" y2="'+(y+4)+'" stroke="var(--ink-2)"></line>' +
+      '<text x="'+((xa+xb)/2).toFixed(1)+'" y="'+(y+15)+'" text-anchor="middle" font-size="11" '+
+      'font-family="IBM Plex Mono, monospace" fill="var(--ink-2)">'+esc(label)+'</text>';
+  }
+  s += dimH(floorY+24, left, left+gw, plain(S.width,"len"));
+
+  var labX = left + gw + 2.6*sc + 4;
+  if (rlh > 0.5){
+    s += '<line x1="'+(left+gw+4).toFixed(1)+'" y1="'+(roofY-rlh/2).toFixed(1)+'" x2="'+(labX-2).toFixed(1)+
+         '" y2="'+(roofY-rlh/2).toFixed(1)+'" stroke="var(--caution)" stroke-width="1"></line>';
+    s += '<text x="'+(labX).toFixed(1)+'" y="'+(roofY-rlh/2-2).toFixed(1)+'" text-anchor="end" font-size="10.5" '+
+         'font-family="IBM Plex Mono, monospace" fill="var(--caution)">rock load '+esc(plain(g.height,"len"))+'</text>';
+  }
+  s += '<text x="'+(left+gw+6).toFixed(1)+'" y="'+(roofY-bl+4).toFixed(1)+'" font-size="10.5" '+
+       'font-family="IBM Plex Mono, monospace" fill="var(--accent)">bolt '+esc(plain(S.boltLen,"len"))+'</text>';
+  s += '<text x="'+(left+4).toFixed(1)+'" y="'+(floorY-8).toFixed(1)+'" font-size="10.5" '+
+       'font-family="IBM Plex Mono, monospace" fill="var(--ink-3)">h '+esc(plain(S.height,"len"))+'</text>';
+  s += '<text x="'+(left-2.2*sc+5).toFixed(1)+'" y="'+(roofY+gh/2).toFixed(1)+'" font-size="10" '+
+       'letter-spacing="1" font-family="Barlow Condensed, sans-serif" fill="var(--fig-label)">COAL</text>';
+
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Cross-section of the gallery '+
+         'showing the rock load band and the bolt pattern">'+s+'</svg>';
+}
+
+/* ---------- junction plan ---------- */
+function drawPlan(r){
+  var W = 600, H = 330, pad = 40;
+  var arm = 3.2;                                  // m of gallery drawn beyond the junction
+  var mWide = S.cross + 2*arm;
+  var sc = Math.min((W-2*pad)/mWide, (H-2*pad)/(S.width + 2*arm));
+  var cx = W/2, cy = H/2;
+  var hw = S.width*sc/2, hc = S.cross*sc/2;       // half widths on each axis
+  var armPx = arm*sc;
+  var s = '';
+
+  s += '<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="var(--fig-rock)" opacity="0.9"></rect>';
+  s += '<rect x="'+(cx-hc).toFixed(1)+'" y="'+(cy-hw-armPx).toFixed(1)+'" width="'+(2*hc).toFixed(1)+
+       '" height="'+(2*hw+2*armPx).toFixed(1)+'" fill="var(--fig-void)"></rect>';
+  s += '<rect x="'+(cx-hc-armPx).toFixed(1)+'" y="'+(cy-hw).toFixed(1)+'" width="'+(2*hc+2*armPx).toFixed(1)+
+       '" height="'+(2*hw).toFixed(1)+'" fill="var(--fig-void)"></rect>';
+  s += '<path d="M '+(cx-hc-armPx).toFixed(1)+' '+(cy-hw).toFixed(1)+' H '+(cx-hc).toFixed(1)+
+       ' V '+(cy-hw-armPx).toFixed(1)+' M '+(cx+hc+armPx).toFixed(1)+' '+(cy-hw).toFixed(1)+
+       ' H '+(cx+hc).toFixed(1)+' V '+(cy-hw-armPx).toFixed(1)+
+       ' M '+(cx-hc-armPx).toFixed(1)+' '+(cy+hw).toFixed(1)+' H '+(cx-hc).toFixed(1)+
+       ' V '+(cy+hw+armPx).toFixed(1)+' M '+(cx+hc+armPx).toFixed(1)+' '+(cy+hw).toFixed(1)+
+       ' H '+(cx+hc).toFixed(1)+' V '+(cy+hw+armPx).toFixed(1)+
+       '" fill="none" stroke="var(--ink)" stroke-width="1.6"></path>';
+
+  s += '<line x1="'+(cx-hc).toFixed(1)+'" y1="'+(cy-hw).toFixed(1)+'" x2="'+(cx+hc).toFixed(1)+
+       '" y2="'+(cy+hw).toFixed(1)+'" stroke="var(--caution)" stroke-width="1.6" stroke-dasharray="6 4"></line>';
+  s += '<text x="'+(W-14)+'" y="'+(H-14)+'" text-anchor="end" font-size="12" font-weight="600" '+
+       'font-family="IBM Plex Mono, monospace" fill="var(--caution)">diagonal span '+
+       esc(plain(r.junction.span,"len"))+'</text>';
+
+  // bolt grid: gallery pattern along the arms, junction pattern through the crossing
+  var dots = '';
+  function dot(x,y,cls){
+    dots += '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.4" fill="'+
+      (cls==='j'?'var(--danger)':'var(--accent)')+'" stroke="var(--surface)" stroke-width="1"></circle>';
+  }
+  var acrossG = S.width*sc/S.nRow;
+  var acrossJ = S.cross*sc/Math.max(2,S.jRow);
+  var rowG = S.rowSpacing*sc, rowJ = S.jSpacing*sc;
+  var k, x, y;
+  for (y = cy - hw + acrossG/2; y < cy + hw; y += acrossG){
+    for (x = cx - hc - rowG/2; x > cx - hc - armPx; x -= rowG) dot(x, y, 'g');
+    for (x = cx + hc + rowG/2; x < cx + hc + armPx; x += rowG) dot(x, y, 'g');
+  }
+  for (x = cx - hc + acrossJ/2; x < cx + hc; x += acrossJ){
+    for (y = cy - hw - rowG/2; y > cy - hw - armPx; y -= rowG) dot(x, y, 'g');
+    for (y = cy + hw + rowG/2; y < cy + hw + armPx; y += rowG) dot(x, y, 'g');
+  }
+  for (x = cx - hc + acrossJ/2; x < cx + hc; x += acrossJ){
+    for (y = cy - hw + rowJ/2; y < cy + hw; y += rowJ) dot(x, y, 'j');
+  }
+  s += dots;
+
+  s += '<text x="14" y="20" font-size="10" letter-spacing="1.2" font-family="Barlow Condensed, sans-serif" '+
+       'fill="var(--fig-label)">PILLAR</text>';
+  s += '<circle cx="'+(W-176)+'" cy="14" r="3.4" fill="var(--accent)"></circle>' +
+       '<text x="'+(W-166)+'" y="18" font-size="10.5" font-family="IBM Plex Sans, sans-serif" '+
+       'fill="var(--fig-label)">gallery rows</text>' +
+       '<circle cx="'+(W-84)+'" cy="14" r="3.4" fill="var(--danger)"></circle>' +
+       '<text x="'+(W-74)+'" y="18" font-size="10.5" font-family="IBM Plex Sans, sans-serif" '+
+       'fill="var(--fig-label)">junction rows</text>';
+
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Plan of a four-way junction with '+
+         'the bolt pattern marked">'+s+'</svg>';
+}
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   Wiring and rendering
+   ===================================================================== */
+var $ = function(id){ return document.getElementById(id); };
+
+var FIELDS = [
+  ["f-mine","mine","text"],["f-seam","seam","text"],["f-panel","panel","text"],["f-by","by","text"],
+  ["p-layer","layer","num"],["p-struct","struct","num"],["p-weather","weather","num"],
+  ["p-strength","strength","num"],["p-water","water","num"],
+  ["a-depth","aDepth","num"],["a-lat","aLat","num"],["a-ind","aInd","num"],["a-exc","aExc","num"],
+  ["g-width","width","len"],["g-height","height","len"],["g-cross","cross","len"],
+  ["g-depth","depth","len"],["g-dens","dens","dens"],
+  ["s-cap","cap","force"],["s-len","boltLen","len"],["s-n","nRow","num"],["s-row","rowSpacing","len"],
+  ["s-jn","jRow","num"],["s-jrow","jSpacing","len"],["s-sfg","sfG","num"],["s-sfj","sfJ","num"],
+  ["p-centre","centre","len"],["p-hw","workHeight","len"],["p-ucs","ucs","press"]
+];
+
+var LAYER_HINTS = [
+  [6,  "Under 25 mm — laminated, flaky, falls between the bolts"],
+  [12, "25–100 mm — thinly bedded, needs close support"],
+  [18, "100–300 mm — moderately bedded"],
+  [24, "300–800 mm — thickly bedded, self-supporting between rows"],
+  [30, "Over 800 mm — massive, competent roof"]
+];
+var STRUCT_HINTS = [
+  [5,  "Heavily slipped or faulted, closely jointed"],
+  [10, "Frequent slips and joints crossing the gallery"],
+  [15, "Occasional joints, one slip set"],
+  [20, "Widely spaced joints, no persistent slips"],
+  [25, "Massive, no significant structure"]
+];
+var WEATHER_HINTS = [
+  [4,  "Disintegrates in water within hours"],
+  [8,  "Deteriorates noticeably over a shift"],
+  [12, "Slakes slowly on exposure"],
+  [16, "Largely durable, minor spalling"],
+  [20, "Unaffected by exposure and water"]
+];
+var STRENGTH_HINTS = [
+  [3,  "Very weak roof, under about 10 MPa"],
+  [6,  "Weak, roughly 10–25 MPa"],
+  [9,  "Moderate, roughly 25–50 MPa"],
+  [12, "Strong, roughly 50–80 MPa"],
+  [15, "Very strong, above about 80 MPa"]
+];
+var WATER_HINTS = [
+  [2,  "Running water into the gallery"],
+  [4,  "Steady dripping from the roof"],
+  [6,  "Damp with occasional drips"],
+  [8,  "Damp roof, no free water"],
+  [10, "Dry"]
+];
+function hintFor(table, value){
+  for (var i=0;i<table.length;i++) if (value <= table[i][0]) return table[i][1];
+  return table[table.length-1][1];
+}
+
+function readField(id, key, kind){
+  var el = $(id);
+  if (kind === "text"){ S[key] = el.value; return; }
+  var v = parseFloat(el.value);
+  if (isNaN(v)) return;
+  S[key] = (kind === "num") ? v : v / uf(kind);
+}
+function writeField(id, key, kind){
+  var el = $(id);
+  if (kind === "text"){ el.value = S[key] || ""; return; }
+  var v = (kind === "num") ? S[key] : S[key] * uf(kind);
+  el.value = (kind === "num") ? v : Math.round(v*1000)/1000;
+}
+function syncInputs(){ FIELDS.forEach(function(f){ writeField(f[0], f[1], f[2]); }); }
+
+/* ---------- unit labels ---------- */
+function syncUnitLabels(){
+  var L = us("len");
+  $("u-gw").textContent = UNITS === "metric" ? "metres" : "feet";
+  $("u-gh").textContent = UNITS === "metric" ? "metres" : "feet";
+  $("u-gd").textContent = UNITS === "metric" ? "metres" : "feet";
+  $("u-gc").textContent = "the other gallery at the junction";
+  $("u-dn").textContent = us("dens");
+  $("u-cap").textContent = us("force") + " per bolt";
+  $("u-bl").textContent = UNITS === "metric" ? "metres" : "feet";
+  $("u-rs").textContent = L; $("u-jrs").textContent = L;
+  $("u-pc").textContent = "between pillar centres, " + L;
+  $("u-ph").textContent = "extraction height, " + L;
+  $("u-pu").textContent = "25 mm cube, " + us("press");
+  $("t-units").textContent = UNITS === "metric" ? "Metric" : "Imperial";
+  $("t-units").setAttribute("aria-pressed", UNITS === "imperial" ? "true" : "false");
+}
+
+/* ---------- render ---------- */
+function meterState(el, fillEl, markEl, ssf, required){
+  var top = Math.max(required*2, 3);
+  var pct = clamp(ssf/top, 0, 1)*100;
+  fillEl.style.width = pct.toFixed(1) + "%";
+  if (markEl) markEl.style.left = clamp(required/top, 0, 1)*100 + "%";
+  el.classList.remove("warn","bad");
+  if (ssf < required) el.classList.add(ssf < required*0.75 ? "bad" : "warn");
+}
+
+function renderOpening(prefix, o){
+  $(prefix+"-span").textContent = "span " + plain(o.span,"len");
+  $(prefix+"-load").innerHTML = out(o.load,"load");
+  $(prefix+"-height").innerHTML = out(o.height,"len");
+  $(prefix+"-need").innerHTML = out(o.required,"load");
+  $(prefix+"-have").innerHTML = out(o.provided,"load");
+  $(prefix+"-ssf").textContent = isFinite(o.ssf) ? o.ssf.toFixed(2) : "no load";
+  $(prefix+"-req").textContent = o.sfRequired.toFixed(2);
+  meterState($(prefix+"-meter"), $(prefix+"-fill"), $(prefix+"-mark"), o.ssf, o.sfRequired);
+
+  var msg;
+  if (o.load === 0){
+    msg = "The rating predicts no mobilised rock load at this span. Support to the statutory " +
+          "minimum and to what the roof actually does — sounding, tell-tales, and the register.";
+  } else if (o.ssf >= o.sfRequired && S.boltLen >= o.lengthNeeded){
+    msg = "<b>" + o.boltsPerRow + " bolts per row at " + plain(o.rowSpacing,"len") + "</b> holds " +
+          plain(o.provided,"load") + " against a rock load of " + plain(o.load,"load") +
+          ". Rows could open to " + plain(o.maxRowSpacing,"len") + " and still meet the factor.";
+  } else {
+    var fixes = [];
+    if (o.ssf < o.sfRequired) fixes.push("close the rows to <b>" + plain(o.maxRowSpacing,"len") + "</b>");
+    if (S.boltLen < o.lengthNeeded) fixes.push("lengthen the bolt to <b>" + plain(o.lengthNeeded,"len") + "</b>");
+    msg = "Short of the required factor — " + fixes.join(", or ") + ".";
+  }
+  $(prefix+"-advice").innerHTML = msg;
+}
+
+function render(){
+  var r = analyse();
+
+  /* rating gauge */
+  $("rmr-needle").style.left = r.rmr + "%";
+  $("rmr-needle").setAttribute("data-v", r.rmr.toFixed(0));
+  $("rmr-class").textContent = r.cls.label + " roof · class " + r.cls.numeral;
+  $("adj-product").textContent = "×" + r.factor.toFixed(2);
+  $("v-layer").textContent = S.layer;     $("h-layer").textContent = hintFor(LAYER_HINTS, S.layer);
+  $("v-struct").textContent = S.struct;   $("h-struct").textContent = hintFor(STRUCT_HINTS, S.struct);
+  $("v-weather").textContent = S.weather; $("h-weather").textContent = hintFor(WEATHER_HINTS, S.weather);
+  $("v-strength").textContent = S.strength; $("h-strength").textContent = hintFor(STRENGTH_HINTS, S.strength);
+  $("v-water").textContent = S.water;     $("h-water").textContent = hintFor(WATER_HINTS, S.water);
+
+  renderOpening("gal", r.gallery);
+  renderOpening("jun", r.junction);
+
+  /* verdict */
+  var pass = 0, warn = 0, fail = 0;
+  r.checks.forEach(function(c){ if (c.status==="pass") pass++; else if (c.status==="warn") warn++; else fail++; });
+  var v = $("verdict");
+  var wasHidden = v.classList.contains("hidden");
+  v.className = "verdict " + (fail ? "bad" : warn ? "warn" : "ok") + (wasHidden ? " hidden" : "");
+  $("verdict-title").textContent = fail ? "Not adequate" : warn ? "Adequate, with cautions" : "Adequate";
+  $("verdict-text").innerHTML = fail
+    ? "The pattern as entered does not carry the roof this rating predicts. The failing checks below say what to change."
+    : warn
+    ? "The pattern meets every factor of safety. Read the cautions before the rules are drawn up."
+    : "The pattern meets every factor of safety and every limit checked here, at RMR " +
+      r.rmr.toFixed(0) + " (" + r.cls.label.toLowerCase() + " roof).";
+  $("tally-pass").textContent = pass; $("tally-warn").textContent = warn; $("tally-fail").textContent = fail;
+
+  /* checks */
+  $("check-count").textContent = r.checks.length + " checked";
+  $("checks").innerHTML = r.checks.map(function(c){
+    return '<div class="check"><span class="chip '+c.status+'">'+
+      (c.status==="pass"?"Pass":c.status==="warn"?"Caution":"Fail")+'</span>'+
+      '<div><div class="t">'+esc(c.title)+'<em>'+esc(c.code)+'</em></div>'+
+      '<div class="d">'+c.detail+'</div></div></div>';
+  }).join("");
+
+  /* drawings */
+  $("fig-section").innerHTML = drawSection(r);
+  $("fig-plan").innerHTML = drawPlan(r);
+
+  /* pillar */
+  var p = r.pillar;
+  $("pl-width").innerHTML = out(p.width,"len");
+  $("pl-strength").innerHTML = out(p.strength,"press");
+  $("pl-stress").innerHTML = out(p.stress,"press");
+  $("pl-fos").innerHTML = p.fos.toFixed(2);
+  $("pl-extr").textContent = (p.extraction*100).toFixed(0) + "%";
+  meterState($("pl-meter"), $("pl-fill"), null, p.fos, 1.5);
+  $("pl-fill").parentNode.querySelector(".mark").style.left = clamp(1.5/Math.max(3,3), 0, 1)*100 + "%";
+  var statutory = statutoryCentre(S.depth, S.width);
+  $("pl-advice").innerHTML = "<b>" + esc(p.verdict) + ".</b> A " + plain(p.width,"len",1) +
+    " pillar at " + plain(S.centre,"len",1) + " centres under " + plain(S.depth,"len",0) +
+    " of cover carries " + plain(p.stress,"press") + " against a strength of " +
+    plain(p.strength,"press") + "." +
+    (statutory === null ? " The gallery is wider than the tabulated columns of Reg. 111."
+      : " Regulation 111 tabulates " + plain(statutory,"len",1) + " as the minimum centre distance here.");
+
+  renderCharts(r);
+  renderCmrTable();
+  renderRegister();
+  return r;
+}
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   Charts, register, help text and event wiring
+   ===================================================================== */
+var REGIME_BANDS = [
+  {x0:0,  x1:40,  fill:"var(--danger)",  label:"WEAK"},
+  {x0:40, x1:60,  fill:"var(--caution)", label:"MODERATE"},
+  {x0:60, x1:100, fill:"var(--safe)",    label:"STRONG"}
+];
+
+function minimumRating(){
+  for (var rmr=0; rmr<=100; rmr+=0.5){
+    var o = designOpening("g", S.width, S.dens, rmr, S.cap, S.nRow, S.rowSpacing, S.boltLen, S.sfG);
+    if (o.ssf >= o.sfRequired && S.boltLen >= o.lengthNeeded) return rmr;
+  }
+  return null;
+}
+function criticalDepth(){
+  var w = S.centre - S.width;
+  for (var d=20; d<=1000; d+=5){
+    var fos = pillarStrength(S.ucs, S.workHeight, w, d) / pillarStress(d, w, S.width);
+    if (fos < 1.5) return d;
+  }
+  return null;
+}
+
+function renderCmrTable(){
+  var body = document.querySelector("#tb-cmr tbody");
+  if (!body) return;
+  var col = -1, i;
+  for (i=0;i<WIDTH_COLS.length;i++){ if (S.width <= WIDTH_COLS[i] + 1e-9){ col = i; break; } }
+  var band = -1;
+  for (i=0;i<PILLAR_CENTRES.length;i++){
+    if (PILLAR_CENTRES[i].upper === null || S.depth <= PILLAR_CENTRES[i].upper){ band = i; break; }
+  }
+  body.innerHTML = PILLAR_CENTRES.map(function(b, j){
+    var cells = b.row.map(function(v, k){
+      var hit = (j === band && k === col);
+      return '<td class="n"'+(hit ? ' style="font-weight:600;color:var(--accent)"' : '')+'>'+
+        v.toFixed(1)+'</td>';
+    }).join("");
+    return '<tr'+(j === band ? ' class="here"' : '')+'><td>'+esc(b.label)+'</td>'+cells+'</tr>';
+  }).join("");
+}
+
+function renderCharts(r){
+  var rmr, pts1 = [], pts2 = [], sp1 = [], sp2 = [];
+  var jSpan = r.junction.span;
+  for (rmr = 0; rmr <= 100; rmr += 2){
+    pts1.push([rmr, rockLoad(S.width, S.dens, rmr) * uf("load")]);
+    pts2.push([rmr, rockLoad(jSpan, S.dens, rmr) * uf("load")]);
+    var g = designOpening("g", S.width, S.dens, rmr, S.cap, S.nRow, S.rowSpacing, S.boltLen, S.sfG);
+    var j = designOpening("j", jSpan, S.dens, rmr, S.cap, r.junction.boltsPerRow, S.jSpacing, S.boltLen, S.sfJ);
+    sp1.push([rmr, g.maxRowSpacing * uf("len")]);
+    sp2.push([rmr, j.maxRowSpacing * uf("len")]);
+  }
+  var loadMax = Math.ceil(pts2[0][1] * 1.08);
+
+  $("ch-load").innerHTML = lineChart({
+    x:[0,100], y:[0,loadMax], xTitle:"CMRI-ISM rock mass rating", yTitle:"Rock load, " + us("load"),
+    yDp:1, bands:REGIME_BANDS, legendPos:"bottom",
+    series:[
+      {pts:pts1, color:"var(--accent)", width:2.2, label:"gallery"},
+      {pts:pts2, color:"var(--danger)", width:2.2, dash:"6 4", label:"junction"}
+    ],
+    marker:{x:r.rmr, y:r.gallery.load*uf("load"), label:plain(r.gallery.load,"load")}
+  });
+
+  $("ch-space").innerHTML = lineChart({
+    x:[0,100], y:[0, MAX_SPACING*uf("len")*1.08], xTitle:"CMRI-ISM rock mass rating",
+    yTitle:"Largest row spacing, " + us("len"), yDp:1, bands:REGIME_BANDS,
+    series:[
+      {pts:sp1, color:"var(--accent)", width:2.2, label:"gallery"},
+      {pts:sp2, color:"var(--danger)", width:2.2, dash:"6 4", label:"junction"}
+    ],
+    marker:{x:r.rmr, y:r.gallery.maxRowSpacing*uf("len"), label:plain(r.gallery.maxRowSpacing,"len")}
+  });
+
+  var rmrMin = minimumRating(), dCrit = criticalDepth(), reg = [];
+  if (rmrMin !== null) reg.push({pts:[[0,rmrMin],[600,rmrMin]], color:"var(--accent)", width:2,
+    label:"pattern adequate above RMR " + rmrMin.toFixed(0)});
+  if (dCrit !== null && dCrit <= 600) reg.push({pts:[[dCrit,0],[dCrit,100]], color:"var(--danger)",
+    width:2, dash:"5 4", label:"pillar factor of safety falls to 1.5"});
+  $("ch-regime").innerHTML = lineChart({
+    w:1020, h:390, x:[0,600], y:[0,100], xTitle:"Depth of cover, metres",
+    yTitle:"CMRI-ISM rating", yDp:0,
+    hbands:[
+      {y0:0,  y1:40,  fill:"var(--danger)",  label:"WEAK ROOF REGIME"},
+      {y0:40, y1:60,  fill:"var(--caution)", label:"MODERATE"},
+      {y0:60, y1:100, fill:"var(--safe)",    label:"STRONG"}
+    ],
+    series:reg,
+    marker:{x:clamp(S.depth,0,600), y:r.rmr, label:"this working"}
+  });
+
+  var fp = [], fosMax = 0, wmin = 4, wmax = 40;
+  for (var c = S.width + wmin; c <= S.width + wmax; c += 0.5){
+    var w = c - S.width;
+    var fos = pillarStrength(S.ucs, S.workHeight, w, S.depth) / pillarStress(S.depth, w, S.width);
+    fp.push([c, fos]); if (fos > fosMax) fosMax = fos;
+  }
+  var top = Math.max(3, Math.min(Math.ceil(fosMax), 8));
+  $("ch-pillar").innerHTML = lineChart({
+    x:[S.width+wmin, S.width+wmax], y:[0, top], xTitle:"Distance between pillar centres, metres",
+    yTitle:"Factor of safety", yDp:1, xDp:0,
+    series:[
+      {pts:[[S.width+wmin,1.5],[S.width+wmax,1.5]], color:"var(--caution)", width:1.4, dash:"4 4",
+       label:"1.5 · development"},
+      {pts:[[S.width+wmin,2.0],[S.width+wmax,2.0]], color:"var(--safe)", width:1.4, dash:"4 4",
+       label:"2.0 · standing long term"},
+      {pts:fp, color:"var(--accent)", width:2.4}
+    ],
+    marker:{x:clamp(S.centre, S.width+wmin, S.width+wmax), y:r.pillar.fos,
+            label:"FoS " + r.pillar.fos.toFixed(2)}
+  });
+}
+
+/* ---------- roof observation register ---------- */
+function loadRegister(){
+  try { REGISTER = JSON.parse(localStorage.getItem("nmrsa.register") || "[]"); }
+  catch (e){ REGISTER = []; }
+  if (!Array.isArray(REGISTER)) REGISTER = [];
+}
+function saveRegister(){
+  try { localStorage.setItem("nmrsa.register", JSON.stringify(REGISTER)); } catch (e){}
+}
+function renderRegister(){
+  var body = document.querySelector("#tb-reg tbody");
+  if (!body) return;
+  if (!REGISTER.length){
+    body.innerHTML = '<tr><td colspan="9" style="color:var(--ink-3)">No entries yet. ' +
+      'The first one you log is worth more than any published table — it is your seam.</td></tr>';
+  } else {
+    body.innerHTML = REGISTER.map(function(e, i){
+      return '<tr><td>'+esc(e.date)+'</td><td>'+esc(e.loc)+'</td><td>'+esc(e.kind)+'</td>'+
+        '<td class="n">'+esc(e.rmr)+'</td><td class="n">'+esc(e.span)+'</td>'+
+        '<td class="n">'+esc(e.fall)+'</td><td>'+esc(e.support)+'</td><td>'+esc(e.note)+'</td>'+
+        '<td><button class="iconbtn" data-del="'+i+'" title="Remove this entry">✕</button></td></tr>';
+    }).join("");
+  }
+  var scatter = REGISTER.map(function(e){
+    return {x: clamp(parseFloat(e.rmr)||0, 0, 100), y: clamp(parseFloat(e.span)||0, 0, 8),
+            r: (parseFloat(e.fall)||0) > 0 ? 4 + Math.min(parseFloat(e.fall), 4) : 4,
+            fill: /fall|cavity/i.test(e.kind) ? "var(--danger)" : "var(--accent)"};
+  });
+  $("ch-reg").innerHTML = lineChart({
+    x:[0,100], y:[0,8], xTitle:"CMRI-ISM rating at the location", yTitle:"Span, metres",
+    yDp:0, bands:REGIME_BANDS, scatter:scatter,
+    marker:{x:analyseRmrOnly(), y:S.width, label:"this design"}
+  });
+}
+function analyseRmrOnly(){
+  return clamp((S.layer+S.struct+S.weather+S.strength+S.water) * S.aDepth*S.aLat*S.aInd*S.aExc, 0, 100);
+}
+
+/* ---------- help text ---------- */
+var METHOD_HTML = [
+ '<h3>What this tool does</h3>',
+ '<p>It rates the roof the way Indian collieries rate it, works out how much rock the rating says ',
+ 'will hang on the supports, and checks whether the bolting pattern you propose will hold it — in ',
+ 'the gallery and, separately, at the junction, where the roof has to bridge the diagonal.</p>',
+ '<h3>1 · The rating</h3>',
+ '<p>The CMRI-ISM rock mass rating (Venkateswarlu, 1986) was built on Indian coal-measure strata ',
+ 'and is the rating Indian ground control practice is written around. Five parameters are summed:</p>',
+ '<div class="formula">layer thickness <em>30</em> + structural features <em>25</em> + ',
+ 'weatherability <em>20</em> + rock strength <em>15</em> + ground water <em>10</em> = RMR <em>100</em></div>',
+ '<p>The sum is the <em>basic</em> rating. Multiplying it by the situation adjustment factors — depth ',
+ 'of cover, lateral stress, stress induced by adjacent workings, method of excavation — gives the ',
+ '<em>adjusted</em> rating everything downstream uses. Those factors belong to your geotechnical ',
+ 'report; the tool ships them at 1.00 rather than inventing values.</p>',
+ '<h3>2 · Rock load</h3>',
+ '<div class="formula">P = W × γ × (1.7 − 0.037·RMR + 0.0002·RMR²)   <em>tonnes per m²</em><br>',
+ 'W <em>span, m</em> · γ <em>roof density, t/m³</em></div>',
+ '<p>Dividing by density gives the rock load height — the thickness of roof the equation says is ',
+ 'de-stressed. That height, plus grout length, is what sets the bolt. The bracket has roots at ',
+ 'RMR 85 and RMR 100 and dips marginally negative between them, so it is floored at zero: above ',
+ '85 the equation predicts no mobilised load and the statutory minimum governs, not this arithmetic.</p>',
+ '<h3>3 · The junction</h3>',
+ '<p>A four-way junction is not a wider gallery, it is a diagonal one. The span used is ',
+ '√(W₁² + W₂²) — 5.94 m where two 4.2 m galleries cross — which is why junctions carry roughly ',
+ 'half again the rock load of the galleries that form them, and why they are given their own row ',
+ 'spacing here.</p>',
+ '<h3>4 · Support resistance</h3>',
+ '<div class="formula">resistance = (bolts per row × anchorage capacity) ÷ (span × row spacing)<br>',
+ 'support safety factor = resistance ÷ rock load</div>',
+ '<p>Common practice takes 1.5 in the gallery and 2.0 at the junction; both are editable. The bolt ',
+ 'must also be long enough to anchor above the de-stressed band, taken here as rock load height ',
+ 'plus 0.3 m of grout, and never shorter than 1.2 m.</p>',
+ '<h3>5 · Pillars</h3>',
+ '<div class="formula">S = 0.27·σc·h<sup>−0.36</sup> + (H/250)·(w/h − 1)   <em>MPa, Sheorey / CIMFR</em><br>',
+ 'σp = 0.025·H·((w + B)/w)²   <em>MPa, tributary area at 25 kN/m³</em></div>',
+ '<p>Factor of safety is strength over stress: 1.5 is the usual development figure, 2.0 for pillars ',
+ 'that must stand long term. The statutory minimum centre distances of Regulation 111 are checked ',
+ 'separately — a pillar can satisfy the arithmetic and still be illegal, or the reverse.</p>',
+ '<h3>What is checked against the code</h3>',
+ '<ul><li>Gallery width 4.8 m and height 3.0 m — Coal Mines Regulations 2017, Reg. 111.</li>',
+ '<li>Minimum distance between pillar centres for the depth and gallery width — the Reg. 111 table.</li>',
+ '<li>Bolt spacing across the row and between rows against the 1.5 m normally accepted in a ',
+ 'Systematic Support Rule.</li>',
+ '<li>Support safety factor and bolt length against the rock load computed above.</li></ul>',
+ '<div class="caveat"><b>Read this before you use a number from here.</b> NMRSA is a design aid. ',
+ 'What is installed underground is governed by the Systematic Support Rules framed under the Coal ',
+ 'Mines Regulations 2017 and by the DGMS circulars in force, approved by the manager and the ',
+ 'Regional Inspector. The statutory figures reproduced in this tool — the width and height limits ',
+ 'and the pillar centre table — are reproduced for convenience and must be verified against the ',
+ 'Gazette text. Bolt anchorage capacities are indicative: use your own pull-out test results. The ',
+ 'empirical expressions were fitted to Indian bord-and-pillar development in the 3.6–4.8 m width ',
+ 'range; outside it, treat the output as indicative only.</div>',
+ '<h3>Sources</h3>',
+ '<ul><li>Venkateswarlu, V. (1986) — <em>Geomechanics classification of coal measure rocks vis-à-vis ',
+ 'roof supports</em>. CMRI, Dhanbad. The five-parameter rating and its weighting.</li>',
+ '<li>Paul, A. et al. (2014) — <em>Rock load estimation in development galleries and junctions for ',
+ 'underground coal mines: a CMRI-ISM rock mass rating approach</em>, Journal of Mining 618719.</li>',
+ '<li>Sheorey, P. R. (1987) — <em>Coal pillar strength estimation from failed and stable cases</em>, ',
+ 'Int. J. Rock Mech. Min. Sci.</li>',
+ '<li>Coal Mines Regulations 2017 (DGMS), Reg. 111 — development work.</li></ul>',
+ '<p style="color:var(--ink-3);font-size:12.5px">Everything on this page is computed in your ',
+ 'browser. Nothing is sent anywhere, and the page keeps working with the network off — which is ',
+ 'the point, underground.</p>'
+].join("");
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   Start-up
+   ===================================================================== */
+(function(){
+
+  /* bolt type picker */
+  var sel = $("s-type");
+  BOLT_TYPES.forEach(function(b){
+    var o = document.createElement("option");
+    o.value = b.id; o.textContent = b.label + " · " + b.cap + " t";
+    sel.appendChild(o);
+  });
+  sel.addEventListener("change", function(){
+    var b = BOLT_TYPES.filter(function(x){ return x.id === sel.value; })[0];
+    if (b){ S.boltType = b.id; S.cap = b.cap; syncInputs(); render(); }
+  });
+
+  FIELDS.forEach(function(f){
+    var el = $(f[0]);
+    el.addEventListener("input", function(){ readField(f[0], f[1], f[2]); render(); });
+  });
+
+  $("t-units").addEventListener("click", function(){
+    UNITS = UNITS === "metric" ? "imperial" : "metric";
+    syncUnitLabels(); syncInputs(); render();
+  });
+
+  $("t-save").addEventListener("click", function(){
+    try {
+      localStorage.setItem("nmrsa.project", JSON.stringify({state:S, units:UNITS}));
+      flash($("t-save"), "Saved");
+    } catch (e){ flash($("t-save"), "Blocked"); }
+  });
+
+  $("t-print").addEventListener("click", function(){ window.print(); });
+
+  $("b-reset").addEventListener("click", function(){
+    S = Object.assign({}, DEFAULTS);
+    sel.value = S.boltType; syncInputs(); render();
+  });
+
+  $("b-suggest").addEventListener("click", function(){
+    var rmr = analyseRmrOnly();
+    var jSpan = junctionSpan(S.width, S.cross);
+    S.nRow = Math.max(S.nRow, boltsAcross(S.width));
+    S.jRow = Math.max(S.jRow, boltsAcross(jSpan));
+    S.boltLen = Math.max(MIN_BOLT_LEN,
+      Math.ceil((rockLoadHeight(jSpan, rmr) + ANCHORAGE) * 10) / 10);
+    function fit(span, n, sf){
+      var load = rockLoad(span, S.dens, rmr) * sf;
+      if (load <= 0) return MAX_SPACING;
+      return clamp(Math.floor(n * S.cap / (load * span) * 10) / 10, 0.5, MAX_SPACING);
+    }
+    S.rowSpacing = fit(S.width, S.nRow, S.sfG);
+    S.jSpacing = fit(jSpan, S.jRow, S.sfJ);
+    syncInputs(); render(); flash($("b-suggest"), "Pattern set");
+  });
+
+  /* ---- register ---- */
+  $("b-add").addEventListener("click", function(){
+    REGISTER.unshift({
+      date: $("r-date").value || new Date().toISOString().slice(0,10),
+      loc: $("r-loc").value || "—",
+      kind: $("r-kind").value,
+      rmr: $("r-rmr").value, span: $("r-span").value, fall: $("r-fall").value,
+      support: $("r-sup").value || "—", note: $("r-note").value || "—"
+    });
+    saveRegister(); renderRegister();
+    $("r-loc").value = ""; $("r-note").value = "";
+  });
+
+  document.querySelector("#tb-reg").addEventListener("click", function(ev){
+    var i = ev.target.getAttribute && ev.target.getAttribute("data-del");
+    if (i === null || i === undefined) return;
+    REGISTER.splice(parseInt(i,10), 1); saveRegister(); renderRegister();
+  });
+
+  $("b-export").addEventListener("click", function(){
+    var text = JSON.stringify(REGISTER, null, 2);
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(
+        function(){ flash($("b-export"), "Copied"); },
+        function(){ window.prompt("Copy the register:", text); });
+    } else { window.prompt("Copy the register:", text); }
+  });
+
+  $("b-import").addEventListener("click", function(){
+    var text = window.prompt("Paste a register exported from NMRSA:", "");
+    if (!text) return;
+    try {
+      var rows = JSON.parse(text);
+      if (Array.isArray(rows)){ REGISTER = rows; saveRegister(); renderRegister();
+        flash($("b-import"), "Imported"); }
+    } catch (e){ flash($("b-import"), "Not valid"); }
+  });
+
+  /* ---- tabs ---- */
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs button'));
+  tabs.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      tabs.forEach(function(b){ b.setAttribute("aria-selected", b === btn ? "true" : "false"); });
+      ["design","charts","pillar","register","method"].forEach(function(name){
+        $("pane-" + name).classList.toggle("hidden", name !== btn.dataset.pane);
+      });
+      $("verdict").classList.toggle("hidden", btn.dataset.pane === "method");
+    });
+  });
+
+  function flash(btn, text){
+    var old = btn.textContent;
+    btn.textContent = text;
+    setTimeout(function(){ btn.textContent = old; }, 1400);
+  }
+
+  /* ---- restore and draw ---- */
+  try {
+    var saved = JSON.parse(localStorage.getItem("nmrsa.project") || "null");
+    if (saved && saved.state){ S = Object.assign({}, DEFAULTS, saved.state); UNITS = saved.units || "metric"; }
+  } catch (e){}
+  loadRegister();
+
+  $("method-prose").innerHTML = METHOD_HTML;
+  $("r-date").value = new Date().toISOString().slice(0,10);
+  sel.value = S.boltType;
+  syncUnitLabels();
+  syncInputs();
+  render();
+})();
+</script>
